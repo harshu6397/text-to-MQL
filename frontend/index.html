@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text-to-MQL Demo Platform</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Text-to-MQL Demo Platform</h1>
+            <p>Ask natural language questions about our school database</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Demo Queries Section -->
+            <div class="demo-section">
+                <h2>📋 Demo Queries</h2>
+                <p>Click any question below to try it out:</p>
+                
+                <div class="demo-categories">
+                    <div class="category">
+                        <h3>👥 Student Questions</h3>
+                        <div class="demo-queries">
+                            <button class="demo-btn" data-query="How many students are enrolled in total?">How many students are enrolled in total?</button>
+                            <button class="demo-btn" data-query="What is the average GPA of all students?">What is the average GPA of all students?</button>
+                            <button class="demo-btn" data-query="List all students in Computer Science department">List all students in Computer Science department</button>
+                            <button class="demo-btn" data-query="How many students are in their final year?">How many students are in their final year?</button>
+                            <button class="demo-btn" data-query="Show me students with GPA above 3.5">Show me students with GPA above 3.5</button>
+                        </div>
+                    </div>
+
+                    <div class="category">
+                        <h3>🏢 Department Questions</h3>
+                        <div class="demo-queries">
+                            <button class="demo-btn" data-query="How many departments do we have?">How many departments do we have?</button>
+                            <button class="demo-btn" data-query="What are the names of all departments?">What are the names of all departments?</button>
+                            <button class="demo-btn" data-query="Which department was established first?">Which department was established first?</button>
+                            <button class="demo-btn" data-query="Show me all department heads">Show me all department heads</button>
+                            <button class="demo-btn" data-query="List departments with their descriptions">List departments with their descriptions</button>
+                        </div>
+                    </div>
+
+                    <div class="category">
+                        <h3>📚 Course Questions</h3>
+                        <div class="demo-queries">
+                            <button class="demo-btn" data-query="How many courses are offered this semester?">How many courses are offered this semester?</button>
+                            <button class="demo-btn" data-query="Which course has most students enrolled?, give me the course name and number of students enrolled">Which course has most students enrolled?, give me the course name and number of students enrolled</button>
+                            <button class="demo-btn" data-query="What courses have 3 or more credits?">What courses have 3 or more credits?</button>
+                            <button class="demo-btn" data-query="Show me all Spring semester courses">Show me all Spring semester courses</button>
+                            <button class="demo-btn" data-query="Which courses are taught by Professor Smith?">Which courses are taught by Professor Smith?</button>
+                        </div>
+                    </div>
+
+                    <div class="category">
+                        <h3>👨‍🏫 Teacher Questions</h3>
+                        <div class="demo-queries">
+                            <button class="demo-btn" data-query="How many teachers work at the university?">How many teachers work at the university?</button>
+                            <button class="demo-btn" data-query="List all teachers in Physics department">List all teachers in Physics department</button>
+                            <button class="demo-btn" data-query="What is the average salary of teachers?">What is the average salary of teachers?</button>
+                            <button class="demo-btn" data-query="Show me teachers hired after 2020">Show me teachers hired after 2020</button>
+                            <button class="demo-btn" data-query="Who are the highest paid teachers?">Who are the highest paid teachers?</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Interface -->
+            <div class="query-section">
+                <h2>💬 Ask Your Question</h2>
+                <div class="input-container">
+                    <textarea 
+                        id="queryInput" 
+                        placeholder="Type your question about students, departments, courses, or teachers..."
+                        rows="3"
+                    ></textarea>
+                    <button id="submitBtn" onclick="submitQuery()">
+                        <span id="buttonText">Ask Question</span>
+                        <span id="loadingSpinner" class="spinner" style="display: none;"></span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>📊 Results</h2>
+                
+                <!-- Natural Language Answer -->
+                <div class="answer-card">
+                    <h3>💬 Answer</h3>
+                    <div id="formattedAnswer" class="answer-text"></div>
+                </div>
+
+                <!-- Query Details -->
+                <div class="details-grid">
+                    <div class="detail-card">
+                        <h4>🔧 Generated MongoDB Query</h4>
+                        <pre id="generatedQuery" class="code-block"></pre>
+                    </div>
+
+                    <div class="detail-card">
+                        <h4>📋 Raw Results</h4>
+                        <pre id="rawResults" class="code-block"></pre>
+                    </div>
+                </div>
+
+                <!-- Workflow Status -->
+                <div class="workflow-card">
+                    <h4>⚙️ Workflow Steps</h4>
+                    <div id="workflowSteps" class="workflow-steps"></div>
+                </div>
+
+                <!-- Execution Info -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">⏱️ Execution Time:</span>
+                        <span id="executionTime" class="info-value"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">📁 Collections Found:</span>
+                        <span id="collectionsFound" class="info-value"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">📄 Schemas Retrieved:</span>
+                        <span id="schemasRetrieved" class="info-value"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Section -->
+            <div class="error-section" id="errorSection" style="display: none;">
+                <h2>❌ Error</h2>
+                <div class="error-card">
+                    <p id="errorMessage"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

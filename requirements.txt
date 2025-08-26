@@ -1,0 +1,16 @@
+fastapi==0.112.2
+uvicorn==0.30.6
+pymongo==4.14.1
+motor==3.6.1
+langchain==0.3.27
+langchain-mongodb==0.7.0
+langchain-openai==0.2.0
+langchain-cohere==0.4.0
+langgraph==0.4.5
+langgraph-checkpoint-mongodb==0.2.0
+pydantic==2.11.7
+python-dotenv==1.1.0
+faker==37.5.3
+numpy==1.26.4
+openai==1.90.0
+cohere==5.17.3
