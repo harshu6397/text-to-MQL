@@ -2,6 +2,57 @@
 Prompts for the MongoDB Query Language (MQL) generation
 """
 
+def get_collection_identification_prompt(user_query: str, available_collections: list) -> str:
+    """
+    Generate prompt for AI-powered collection identification
+    
+    Args:
+        user_query (str): User's natural language query
+        available_collections (list): List of available collection names
+        
+    Returns:
+        str: Collection identification prompt
+    """
+    collections_str = ", ".join(available_collections)
+    
+    return f"""# Collection Identification for MongoDB Query
+
+You are an expert MongoDB database analyst. Your task is to identify which collections are relevant for answering a user's natural language query.
+
+## Available Collections
+{collections_str}
+
+## User Query
+"{user_query}"
+
+## Instructions
+1. **Analyze the user's question** to understand what information they're seeking
+2. **Identify primary collections** that directly contain the data needed to answer the question
+3. **Identify related collections** that might be needed for joins or additional context
+4. **Consider relationships** between collections (e.g., if asking about students in a course, you might need both students and enrollments collections)
+
+## Rules
+- Return only collection names that exist in the available collections list
+- Prioritize collections that directly answer the question
+- Include related collections only if they're necessary for the query
+- Maximum of 4 collections to avoid complexity
+- Return collections in order of importance (most relevant first)
+
+## Output Format
+Return only a JSON array of collection names, for example:
+["students", "departments", "enrollments"]
+
+Do not include any explanation or additional text - just the JSON array.
+
+## Examples
+- Query: "How many students are enrolled?" → ["students"]
+- Query: "Show students in Computer Science department" → ["students", "departments"]
+- Query: "Which course has the most enrollments?" → ["courses", "enrollments"]
+- Query: "List teachers and their departments" → ["teachers", "departments"]
+
+## Your Response
+Based on the user query above, identify the relevant collections:"""
+
 def get_mql_generation_prompt(target_collection: str, schema_context: str, natural_language_query: str) -> str:
     """
     Generate the MQL generation prompt with dynamic values

@@ -1,0 +1,20 @@
+{
+  "name": "text-to-mql-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Text-to-MQL Demo Platform",
+  "main": "index.html",
+  "scripts": {
+    "dev": "python -m http.server 3000",
+    "start": "python -m http.server 8080",
+    "build": "echo 'Static site - no build needed'"
+  },
+  "keywords": [
+    "text-to-mql",
+    "mongodb",
+    "ai",
+    "frontend"
+  ],
+  "author": "Harsh Kumar",
+  "license": "MIT",
+  "devDependencies": {}
+}

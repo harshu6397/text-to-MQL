@@ -173,8 +173,9 @@ class StructuredAgentService:
         logger.info("Step 2: Analyzing schemas for relevant collections...")
         
         try:
-            # Use collection helper to analyze relevant collections
-            relevant_collections = analyze_collections_for_query(state["user_query"], state["collections"])
+            # Use AI-powered collection helper to analyze relevant collections
+            from app.helpers.collection_helpers import analyze_collections_for_query_sync
+            relevant_collections = analyze_collections_for_query_sync(state["user_query"], state["collections"])
             
             logger.info(SUCCESS_MESSAGES['RELEVANT_COLLECTIONS_IDENTIFIED'].format(collections=relevant_collections))
             

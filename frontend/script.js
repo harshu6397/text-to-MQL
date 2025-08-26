@@ -1,5 +1,7 @@
 // API Configuration
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8000'
+    : 'https://your-api-domain.com'; // Replace with your actual API domain
 
 // DOM Elements
 const queryInput = document.getElementById('queryInput');

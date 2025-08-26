@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+import os
 
 from app.core.database import db_manager
 from app.routes import structured_routes, database_routes
@@ -23,13 +24,17 @@ async def lifespan(app: FastAPI):
         logger.info("Database connection established")
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
-        raise
+        # Don't raise in production, just log the error
+        logger.warning("Continuing without database connection...")
     
     yield
     
     # Shutdown
     logger.info("Shutting down Text-to-MQL application...")
-    await db_manager.close_mongo_connection()
+    try:
+        await db_manager.close_mongo_connection()
+    except:
+        pass
 
 
 # Create FastAPI app
@@ -42,10 +47,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS for Vercel deployment
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=os.getenv("ENV") == "development" and ["*"] or ["https://text-to-mql-frontend.vercel.app/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -132,7 +137,7 @@ if __name__ == "__main__":
     from app.core.config import settings
     
     uvicorn.run(
-        "app.main:app",
+        "main:app",
         host=settings.API_HOST,
         port=settings.API_PORT,
         reload=settings.DEBUG

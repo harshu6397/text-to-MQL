@@ -45,6 +45,37 @@ class LLMService:
             logger.error(f"Failed to initialize LLM: {str(e)}")
             raise
 
+    async def generate_text(self, prompt: str) -> str:
+        """
+        Generate text response using Cohere API for general purposes
+        
+        Args:
+            prompt (str): The prompt to send to the LLM
+            
+        Returns:
+            str: Generated text response
+        """
+        try:
+            # Initialize Cohere client if not already done
+            self._initialize_cohere()
+            
+            # Generate response using Cohere
+            response = self.cohere_client.generate(
+                model='command-r-plus',
+                prompt=prompt,
+                max_tokens=500,
+                temperature=0.1  # Low temperature for precise responses
+            )
+            
+            raw_response = response.generations[0].text.strip()
+            logger.info(f"Generated text response: {raw_response}")
+            
+            return raw_response
+            
+        except Exception as e:
+            logger.error(f"Error generating text: {e}")
+            raise
+
     def generate_mql_query(self, natural_language_query: str, schema_context: str = "", target_collection: str = "collection") -> str:
         """
         Generate MongoDB Query Language (MQL) from natural language using Cohere API
@@ -72,8 +103,6 @@ class LLMService:
                 max_tokens=1000,
                 temperature=DEFAULT_TEMPERATURE
             )
-
-            print("Response received from Cohere", response)  # Debug print
             
             raw_response = response.generations[0].text.strip()
 
