@@ -9,23 +9,32 @@ logger = logging.getLogger(__name__)
 
 def prepare_schema_context(schema_info: Dict[str, str]) -> str:
     """
-    Prepare schema context string for MQL generation
+    Prepare schema context string for MQL generation with enhanced data type information
     
     Args:
         schema_info: Dictionary of collection names to schema information
         
     Returns:
-        str: Formatted schema context string
+        str: Formatted schema context string with data type guidance
     """
     if not schema_info:
         return "No schema information available"
     
-    schema_context = "\n\n".join([
-        f"Collection '{collection}':\n{schema}" 
-        for collection, schema in schema_info.items()
-    ])
+    schema_parts = []
+    for collection, schema in schema_info.items():
+        # Enhance schema with data type guidance
+        enhanced_schema = f"Collection '{collection}':\n{schema}"
+        
+        # Add data type mapping guidance
+        enhanced_schema += "\n\nDATA TYPE MAPPING GUIDANCE:"
+        enhanced_schema += "\n- If field type is 'Number': Use integer values (e.g., level: 4, age: 22)"
+        enhanced_schema += "\n- If field type is 'String': Use string values (e.g., name: \"John Doe\")"
+        enhanced_schema += "\n- If field type is 'Date': Use ISODate format"
+        enhanced_schema += "\n- If field type is 'ObjectId': Use ObjectId format"
+        
+        schema_parts.append(enhanced_schema)
     
-    return schema_context
+    return "\n\n".join(schema_parts)
 
 
 def get_schema_for_collections(schema_tool: Any, relevant_collections: List[str]) -> Dict[str, str]:

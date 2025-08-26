@@ -48,26 +48,36 @@ class DatabaseManager:
         return self.sync_database[collection_name]
 
     async def create_indexes(self):
-        """Create necessary indexes"""
+        """Create necessary indexes dynamically for all collections"""
         try:
-            # Create text indexes for search
-            collections_to_index = [
-                "departments", "teachers", "courses", "students", "enrollments"
+            # Get all collections dynamically
+            collection_names = await self.database.list_collection_names()
+            
+            # Filter out system collections
+            user_collections = [
+                name for name in collection_names 
+                if not name.startswith('system.') and name not in ['checkpoint']
             ]
             
-            for collection_name in collections_to_index:
+            for collection_name in user_collections:
                 collection = self.get_collection(collection_name)
                 
-                # Create text index for full-text search
-                await collection.create_index([("$**", "text")])
-                
-                # Create vector index if embeddings exist
                 try:
+                    # Create text index for full-text search
+                    await collection.create_index([("$**", "text")])
+                    logger.info(f"Created text index for collection: {collection_name}")
+                except Exception as e:
+                    logger.warning(f"Could not create text index for {collection_name}: {e}")
+                
+                try:
+                    # Create vector index if embeddings exist
                     await collection.create_index([("vector_embedding", "2dsphere")])
+                    logger.info(f"Created vector index for collection: {collection_name}")
                 except Exception:
-                    pass  # Vector index creation might fail if field doesn't exist
+                    # Vector index creation might fail if field doesn't exist, which is fine
+                    pass
             
-            logger.info("Database indexes created successfully")
+            logger.info(f"Database indexes created successfully for {len(user_collections)} collections")
             
         except Exception as e:
             logger.error(f"Error creating indexes: {e}")

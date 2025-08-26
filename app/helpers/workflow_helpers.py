@@ -27,11 +27,31 @@ def build_workflow_graph(workflow_nodes: Dict[str, Any]) -> StateGraph:
     for node_name, node_function in workflow_nodes.items():
         workflow.add_node(node_name, node_function)
 
-    # Define the workflow edges (linear progression for deterministic behavior)
+    # Define the workflow edges with conditional routing
     workflow.add_edge(START, "list_collections")
     workflow.add_edge("list_collections", "get_schema")
     workflow.add_edge("get_schema", "generate_query")
-    workflow.add_edge("generate_query", "run_query")
+    workflow.add_edge("generate_query", "need_checker")
+    
+    # Conditional edge from need_checker
+    def decide_next_step(state: MessagesState):
+        """Decide whether to check query or run it directly"""
+        if state.get("needs_check", False):
+            return "check_query"
+        else:
+            return "run_query"
+    
+    workflow.add_conditional_edges(
+        "need_checker",
+        decide_next_step,
+        {
+            "check_query": "check_query",
+            "run_query": "run_query"
+        }
+    )
+    
+    # Both check_query and run_query lead to format_answer
+    workflow.add_edge("check_query", "run_query")
     workflow.add_edge("run_query", "format_answer")
     workflow.add_edge("format_answer", END)
 
@@ -52,6 +72,8 @@ def extract_workflow_steps(final_state: Dict[str, Any]) -> List[Dict[str, str]]:
         {"step": "List Collections", "status": final_state.get("step_status", {}).get("list_collections", "pending")},
         {"step": "Get Schema", "status": final_state.get("step_status", {}).get("get_schema", "pending")},
         {"step": "Generate Query", "status": final_state.get("step_status", {}).get("generate_query", "pending")},
+        {"step": "Need Checker", "status": final_state.get("step_status", {}).get("need_checker", "pending")},
+        {"step": "Check Query", "status": final_state.get("step_status", {}).get("check_query", "skipped" if not final_state.get("needs_check", False) else "pending")},
         {"step": "Run Query", "status": final_state.get("step_status", {}).get("run_query", "pending")},
         {"step": "Format Answer", "status": final_state.get("step_status", {}).get("format_answer", "pending")}
     ]
@@ -96,7 +118,9 @@ def create_initial_workflow_state(user_query: str) -> Dict[str, Any]:
         "query_result": None,
         "formatted_answer": "",
         "step_status": {},
-        "error_info": None
+        "error_info": None,
+        "needs_check": False,
+        "query_issues": None
     }
     
     return initial_state

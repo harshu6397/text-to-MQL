@@ -3,40 +3,18 @@ Application constants for the MongoDB MQL generation service
 """
 
 # Default values
-DEFAULT_TARGET_COLLECTION = "departments"
 MAX_RETRIES = 3
 MAX_COLLECTIONS_TO_ANALYZE = 3
 
-# Collection keywords mapping for smart collection detection
-COLLECTION_KEYWORDS = {
-    'students': ['student', 'pupil', 'learner', 'enrollment'],
-    'departments': ['department', 'dept', 'faculty', 'division'],
-    'courses': ['course', 'class', 'subject', 'curriculum'],
-    'teachers': ['teacher', 'instructor', 'professor', 'faculty'],
-    'enrollments': ['enrollment', 'enroll', 'registration', 'signup']
-}
-
-# Common collections priority order
-COMMON_COLLECTIONS = ['students', 'departments', 'courses']
-
-# Date fields for sorting operations
-DATE_FIELDS = ['established_year', 'created_at', 'date', 'year']
-
-# Query type keywords
+# Query type keywords (these are universal and not collection-specific)
 COUNT_KEYWORDS = ['count', 'how many', 'total', 'number']
 FIRST_KEYWORDS = ['first', 'earliest', 'oldest']
 LAST_KEYWORDS = ['last', 'latest', 'newest']
 
-# Collection priority mapping for target collection determination
-COLLECTION_PRIORITY = {
-    'departments': ['department', 'dept', 'faculty', 'division'],
-    'students': ['student', 'pupil', 'learner'],
-    'courses': ['course', 'class', 'subject'],
-    'teachers': ['teacher', 'instructor', 'professor'],
-    'enrollments': ['enrollment', 'enroll', 'registration']
-}
+# Common date field patterns (these are universal field name patterns)
+DATE_FIELD_PATTERNS = ['date', 'created', 'established', 'year', 'time', 'updated']
 
-# System collections to filter out
+# System collections to filter out (these are MongoDB system collections)
 SYSTEM_COLLECTIONS = ['checkpoint', 'system']
 
 # Query limits and timeouts

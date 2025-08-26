@@ -6,7 +6,7 @@ from app.core.config import settings
 from app.services.llm_service import llm_service
 from app.helpers.result_helpers import is_empty_result, parse_results
 from app.helpers.query_helpers import fix_query_syntax, regenerate_query
-from app.helpers.collection_helpers import determine_target_collection, analyze_collections_for_query
+from app.helpers.collection_helpers import determine_target_collection_ai, analyze_collections_for_query_sync
 from app.helpers.schema_helpers import prepare_schema_context, get_schema_for_collections
 from app.helpers.workflow_helpers import (
     build_workflow_graph, extract_workflow_steps, create_initial_workflow_state, 
@@ -14,7 +14,6 @@ from app.helpers.workflow_helpers import (
 )
 from app.constants import (
     FORMAT_ANSWER_PROMPT,
-    DEFAULT_TARGET_COLLECTION,
     MAX_RETRIES,
     SYSTEM_COLLECTIONS,
     MAX_RESULT_DISPLAY_LENGTH,
@@ -39,7 +38,9 @@ class MessagesState(TypedDict):
     query_result: Any   
     formatted_answer: str 
     step_status: Dict[str, str] 
-    error_info: Optional[str]   
+    error_info: Optional[str]
+    needs_check: bool
+    query_issues: Optional[str]   
 
 
 class StructuredAgentService:
@@ -91,6 +92,8 @@ class StructuredAgentService:
             "list_collections": self._list_collections_node,
             "get_schema": self._get_schema_node,
             "generate_query": self._generate_query_node,
+            "need_checker": self._need_checker_node,
+            "check_query": self._check_query_node,
             "run_query": self._run_query_node,
             "format_answer": self._format_answer_node
         }
@@ -226,9 +229,10 @@ class StructuredAgentService:
             schema_context = prepare_schema_context(state["schema_info"])
             
             # Determine target collection
-            target_collection = determine_target_collection(state["user_query"], state["collections"], state["schema_info"])
+            target_collection = determine_target_collection_ai(state["user_query"], state["collections"], state["schema_info"])
             if not target_collection:
-                target_collection = DEFAULT_TARGET_COLLECTION  # fallback
+                # Fallback to first available collection
+                target_collection = state["collections"][0] if state["collections"] else "collection"
             
             logger.info(SUCCESS_MESSAGES['TARGET_COLLECTION_DETERMINED'].format(collection=target_collection))
             logger.info("Using enhanced MQL generator with schema context")
@@ -258,9 +262,9 @@ class StructuredAgentService:
             logger.error(error_msg)
             
             # Fallback to simple count query
-            target_collection = determine_target_collection(state["user_query"], state["collections"], state["schema_info"])
+            target_collection = determine_target_collection_ai(state["user_query"], state["collections"], state["schema_info"])
             if not target_collection:
-                target_collection = DEFAULT_TARGET_COLLECTION
+                target_collection = state["collections"][0] if state["collections"] else "collection"
             
             fallback_query = f'db.{target_collection}.aggregate([{{"$count": "total"}}])'
             
@@ -273,12 +277,127 @@ class StructuredAgentService:
         
         return state
 
+    def _need_checker_node(self, state: MessagesState) -> MessagesState:
+        """
+        Node: Decide whether the generated query needs to be checked
+        This step uses LLM to analyze if the query looks correct or needs validation
+        """
+        logger.info("Step: Checking if query needs validation...")
+        
+        try:
+            if not state["mql_query"]:
+                # If no query generated, skip checking
+                state["needs_check"] = False
+                state["step_status"]["need_checker"] = "success"
+                return state
+            
+            # Prepare schema context for analysis
+            schema_context = prepare_schema_context(state["schema_info"])
+            
+            # Use LLM service to determine if query needs checking
+            needs_check = llm_service.should_check_query(
+                query=state["mql_query"],
+                user_query=state["user_query"],
+                schema_context=schema_context
+            )
+            
+            state["needs_check"] = needs_check
+            state["step_status"]["need_checker"] = "success"
+            
+            # Add to conversation history
+            check_message = ToolMessage(
+                content=f"Query check needed: {needs_check}",
+                tool_call_id="need_checker_call"
+            )
+            state["messages"].append(check_message)
+            
+            logger.info(f"Query check decision: needs_check={needs_check}")
+            
+        except Exception as e:
+            error_msg = f"Need checker failed: {str(e)}"
+            logger.error(error_msg)
+            
+            # Default to checking if there's an error
+            state["needs_check"] = True
+            state["step_status"]["need_checker"] = "failed"
+            state["error_info"] = error_msg
+            
+            error_message = ToolMessage(
+                content=error_msg,
+                tool_call_id="need_checker_call"
+            )
+            state["messages"].append(error_message)
+        
+        return state
+
+    def _check_query_node(self, state: MessagesState) -> MessagesState:
+        """
+        Node: Check and analyze the MongoDB query for potential issues
+        This step validates the query syntax, logic, and suggests fixes if needed
+        """
+        logger.info("Step: Analyzing query for potential issues...")
+        
+        try:
+            if not state["mql_query"]:
+                raise Exception("No query to check")
+            
+            # Prepare schema context for analysis
+            schema_context = prepare_schema_context(state["schema_info"])
+            
+            # Use LLM service to analyze query issues
+            query_analysis = llm_service.analyze_query_issues(
+                query=state["mql_query"],
+                user_query=state["user_query"],
+                schema_context=schema_context
+            )
+            
+            # Check if the analysis found issues
+            if query_analysis.get("has_issues", False):
+                logger.warning(f"Query issues found: {query_analysis.get('issues', '')}")
+                
+                # If there's a suggested fix, apply it
+                if query_analysis.get("fixed_query"):
+                    logger.info("Applying suggested query fix...")
+                    state["mql_query"] = query_analysis["fixed_query"]
+                    state["query_issues"] = query_analysis.get("issues", "")
+                    logger.info(f"Query updated to: {state['mql_query']}")
+                else:
+                    state["query_issues"] = query_analysis.get("issues", "No specific issues identified")
+            else:
+                logger.info("No issues found in the query")
+                state["query_issues"] = None
+            
+            state["step_status"]["check_query"] = "success"
+            
+            # Add to conversation history
+            analysis_message = ToolMessage(
+                content=f"Query analysis completed. Issues found: {query_analysis.get('has_issues', False)}",
+                tool_call_id="check_query_call"
+            )
+            state["messages"].append(analysis_message)
+            
+        except Exception as e:
+            error_msg = f"Query check failed: {str(e)}"
+            logger.error(error_msg)
+            
+            state["query_issues"] = f"Check failed: {str(e)}"
+            state["step_status"]["check_query"] = "failed"
+            state["error_info"] = error_msg
+            
+            error_message = ToolMessage(
+                content=error_msg,
+                tool_call_id="check_query_call"
+            )
+            state["messages"].append(error_message)
+        
+        return state
+
     def _run_query_node(self, state: MessagesState) -> MessagesState:
         """
-        Node 4: Execute the generated MongoDB query
+        Node: Execute the generated MongoDB query
         This step runs the MongoDB command against the database and captures the results.
         """
-        logger.info("Step 4: Executing MongoDB query...")
+        logger.info("Step: Executing MongoDB query...")
         
         try:
             if not state["mql_query"]:
@@ -295,85 +414,19 @@ class StructuredAgentService:
             
             logger.info(SUCCESS_MESSAGES['MONGODB_TOOL_READY'])
             
-            # Execute the MongoDB command with retry logic
-            max_retries = MAX_RETRIES
-            retry_count = 0
-            result = None
+            # Execute the MongoDB command directly (no retry logic)
+            current_query = state["mql_query"]
             
-            while retry_count < max_retries and result is None:
-                try:
-                    current_query = state["mql_query"]
-                    
-                    # Fix common query issues
-                    current_query = fix_query_syntax(current_query)
-                    
-                    logger.info(f"Attempt {retry_count + 1}: Executing query: {current_query}")
-                    result = query_tool.invoke({"query": current_query})
-                    logger.info(SUCCESS_MESSAGES['QUERY_EXECUTED_SUCCESS'].format(attempt=retry_count + 1))
-                    
-                    print("Raw query result:", result, type(result))  # Debug print
-                    # Check if result is empty and this is the first attempt
-                    if is_empty_result(result):
-                        logger.warning("Query returned empty result on first attempt. Asking LLM to check and fix the query...")
-                        
-                        # Ask LLM to check and fix the query
-                        fixed_query = self._ask_llm_to_fix_query(current_query, state)
-                        if fixed_query and fixed_query != current_query:
-                            logger.info(f"LLM provided fixed query: {fixed_query}")
-                            # Try the fixed query
-                            try:
-                                result = query_tool.invoke({"query": fixed_query})
-                                if not is_empty_result(result):
-                                    logger.info("Fixed query returned results!")
-                                    state["mql_query"] = fixed_query
-                                    break
-                                else:
-                                    logger.warning("Fixed query also returned empty results")
-                            except Exception as fix_error:
-                                logger.warning(f"Fixed query failed: {fix_error}")
-                        
-                        # If still empty after fix attempt, continue with normal retry logic
-                        result = None
-                        retry_count += 1
-                        continue
-                    
-                    # Update state with working query
-                    state["mql_query"] = current_query
-                    
-                except Exception as e:
-                    retry_count += 1
-                    logger.warning(f"Attempt {retry_count} failed: {e}")
-                    
-                    if retry_count < max_retries:
-                        # Try to generate a new query or fix the current one
-                        if retry_count == 1:
-                            # First retry: try to fix syntax issues
-                            state["mql_query"] = fix_query_syntax(state["mql_query"])
-                        elif retry_count == 2:
-                            # Second retry: try to regenerate the query
-                            state["mql_query"] = regenerate_query(state["user_query"], str(state.get("schema_info", {})), determine_target_collection(state["user_query"], state["collections"], state["schema_info"]))
-                    else:
-                        # Final fallback to simple count query
-                        target_collection = determine_target_collection(state["user_query"], state["collections"], state["schema_info"])
-                        if not target_collection:
-                            target_collection = DEFAULT_TARGET_COLLECTION
-                        
-                        fallback_query = f'db.{target_collection}.aggregate([{{"$count": "total"}}])'
-                        logger.info(f"Final fallback: {fallback_query}")
-                        
-                        try:
-                            result = query_tool.invoke({"query": fallback_query})
-                            state["mql_query"] = fallback_query
-                            logger.info(SUCCESS_MESSAGES['FALLBACK_QUERY_SUCCESS'])
-                        except Exception as fallback_error:
-                            logger.error(ERROR_MESSAGES['FALLBACK_QUERY_FAILED'].format(error=fallback_error))
-                            raise Exception(ERROR_MESSAGES['ALL_RETRIES_FAILED'].format(error=e))
+            # Fix common query issues
+            current_query = fix_query_syntax(current_query)
             
-            if result is None:
-                raise Exception("Failed to execute query after all retry attempts")
+            logger.info(f"Executing query: {current_query}")
+            result = query_tool.invoke({"query": current_query})
+            logger.info("Query executed successfully")
             
             # Update state
             state["query_result"] = result
+            state["mql_query"] = current_query
             state["step_status"]["run_query"] = "success"
             
             # Add to conversation history
@@ -454,16 +507,6 @@ class StructuredAgentService:
         
         return state
     
-    def _ask_llm_to_fix_query(self, query: str, state: MessagesState) -> str:
-        """
-        Ask the LLM to check and fix a MongoDB query that returned empty results
-        """
-        # Prepare schema context using helper
-        schema_context = prepare_schema_context(state["schema_info"])
-
-        # Use LLM service to fix the query
-        return llm_service.ask_llm_to_fix_query(query, state['user_query'], schema_context)
-
     async def query(self, query: str, thread_id: str = "default") -> Dict[str, Any]:
         """Process natural language query using structured workflow"""
         start_time = time.time()

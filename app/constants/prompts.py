@@ -45,10 +45,12 @@ Return only a JSON array of collection names, for example:
 Do not include any explanation or additional text - just the JSON array.
 
 ## Examples
-- Query: "How many students are enrolled?" → ["students"]
-- Query: "Show students in Computer Science department" → ["students", "departments"]
-- Query: "Which course has the most enrollments?" → ["courses", "enrollments"]
-- Query: "List teachers and their departments" → ["teachers", "departments"]
+These are generic examples - adapt them based on the actual collections and schema provided:
+
+- Query: "How many records are there?" → Check the most relevant collection
+- Query: "Show records from [collection_name]" → Use the specified collection
+- Query: "Find records with [relationship]" → Use relevant collections based on schema
+- Query: "List all records by [field]" → Use collection containing that field
 
 ## Your Response
 Based on the user query above, identify the relevant collections:"""
@@ -85,12 +87,22 @@ You are an expert MongoDB query generator. Your task is to convert natural langu
 
 3. **Generate syntactically correct MQL** that:
    - Uses proper MongoDB syntax and operators
-   - Handles data types appropriately (strings, numbers, dates, ObjectIds, arrays, etc.)
+   - **HANDLES DATA TYPES CORRECTLY** based on schema:
+     * Number fields: Use numeric values (e.g., level: 4, age: 22)
+     * String fields: Use string values (e.g., name: "John Doe", status: "active")
+     * Date fields: Use ISODate format
+     * ObjectId fields: Use ObjectId format
+   - **MAPS NATURAL LANGUAGE TO CORRECT DATA TYPES**:
+     * Check schema to determine if field is Number, String, Date, etc.
+     * Convert text descriptions to appropriate data types based on schema
+     * For level/year fields: map grade levels to numbers if schema shows Number type
+     * Always check field type in schema before creating query conditions
    - Includes proper field names and collection references
    - Uses efficient query patterns
    - **PRESERVES EXACT VALUES** from the user query (e.g., if user says "CRS_023", use "CRS_023" not "CRS_002")
 
 4. **Important Rules:**
+   - Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
    - Use ONLY aggregate() syntax, not find()
    - For queries with words like "first", "earliest", "oldest", use $sort with ascending order (1) and $limit: 1
    - For queries with words like "last", "latest", "newest", use $sort with descending order (-1) and $limit: 1

@@ -3,7 +3,6 @@ from app.core.config import settings
 from app.constants import (
     get_mql_generation_prompt,
     get_query_fix_prompt,
-    DEFAULT_TARGET_COLLECTION,
     DEFAULT_TEMPERATURE,
     SUCCESS_MESSAGES,
     ERROR_MESSAGES
@@ -173,7 +172,7 @@ class LLMService:
             
             # Clean the response
             if '```' in fixed_query:
-                code_block_pattern = r'```(?:javascript|js|mongodb)?\s*([\s\S]*?)```'
+                code_block_pattern = r'```(?:javascript|js|mongodb|python)?\s*([\s\S]*?)```'
                 match = re.search(code_block_pattern, fixed_query)
                 if match:
                     fixed_query = match.group(1).strip()
@@ -188,6 +187,149 @@ class LLMService:
         except Exception as e:
             logger.warning(f"Error asking LLM to fix query: {e}")
             return query  # Return original query if fixing fails
+
+    def should_check_query(self, query: str, user_query: str, schema_context: str) -> bool:
+        """
+        Determine if a generated MongoDB query needs to be checked for issues
+        
+        Args:
+            query: The generated MongoDB query
+            user_query: Original user query
+            schema_context: Schema information
+            
+        Returns:
+            bool: True if query needs checking, False otherwise
+        """
+        try:
+            check_prompt = f"""
+            Analyze the following MongoDB query and determine if it has ACTUAL ISSUES that need fixing.
+
+            User Query: "{user_query}"
+            Generated MongoDB Query: {query}
+            Schema Context: {schema_context}
+
+            ONLY respond "YES" if you detect ACTUAL PROBLEMS like:
+            1. **SYNTAX ERRORS**: Invalid MongoDB syntax, wrong operators, malformed JSON
+            2. **FIELD MISMATCHES**: Field names in query don't exist in schema
+            3. **DATA TYPE ERRORS**: Using string values for Number fields or vice versa
+            4. **CRITICAL LOGIC ERRORS**: Query logic completely wrong for the user's request
+            5. **MONGODB RULE VIOLATIONS**: $lookup with $ prefixed localField/foreignField, etc.
+
+            DO NOT flag for checking if:
+            - Query is syntactically correct
+            - Field names match schema
+            - Data types are appropriate
+            - Query logic makes sense for the user request
+            - It's just a complex query with multiple stages
+
+            Respond with "YES" ONLY if there are ACTUAL ISSUES that need fixing, otherwise "NO".
+            Give only YES or NO as the answer.
+            """
+
+            self._initialize_cohere()
+            response = self.cohere_client.generate(
+                model='command-r-plus',
+                prompt=check_prompt,
+                max_tokens=10,
+                temperature=0.1
+            )
+            
+            result = response.generations[0].text.strip().upper()
+            return result == "YES"
+            
+        except Exception as e:
+            logger.warning(f"Error checking if query needs validation: {e}")
+            # Default to not checking if there's an error (fail safe)
+            return False
+
+    def analyze_query_issues(self, query: str, user_query: str, schema_context: str) -> dict:
+        """
+        Analyze a MongoDB query for potential issues and suggest fixes
+        
+        Args:
+            query: The MongoDB query to analyze
+            user_query: Original user query
+            schema_context: Schema information
+            
+        Returns:
+            dict: Analysis result with issues and potential fixes
+        """
+        try:
+            analysis_prompt = f"""
+            Analyze the following MongoDB query for potential issues and suggest improvements:
+
+            User Query: "{user_query}"
+            MongoDB Query: {query}
+            Schema Context: {schema_context}
+
+            Check for:
+            1. Syntax errors
+            2. Field name mismatches with schema
+            3. Incorrect operators usage
+            4. Missing required stages
+            5. Performance issues
+            6. Logic errors
+            7. **DATA TYPE MISMATCHES**:
+               - If schema shows field as Number but query uses string value
+               - If schema shows field as String but query uses numeric value
+               - Convert natural language terms to appropriate data types based on schema
+               - For level/grade fields: check if they should be numeric vs string based on schema
+
+            IMPORTANT MONGODB SYNTAX RULES:
+            - In $lookup stage, localField and foreignField should NOT have $ prefix
+            - Use "localField": "_id" NOT "localField": "$_id"
+            - Use "foreignField": "field_name" NOT "foreignField": "$field_name"
+            - Field references in $project, $group, etc. should use $ prefix
+            - Boolean values should be true/false, not True/False
+
+            Respond in this exact JSON format:
+            {{
+                "has_issues": true/false,
+                "issues": "description of issues found",
+                "fixed_query": "corrected query if issues found, or null"
+            }}
+
+            Only provide the JSON response, nothing else.
+            """
+
+            self._initialize_cohere()
+            response = self.cohere_client.generate(
+                model='command-r-plus',
+                prompt=analysis_prompt,
+                max_tokens=800,
+                temperature=0.1
+            )
+            
+            result = response.generations[0].text.strip()
+            
+            # Try to parse JSON response
+            import json
+            try:
+                # Clean up the response to extract JSON
+                if '```' in result:
+                    start = result.find('{')
+                    end = result.rfind('}') + 1
+                    if start != -1 and end != 0:
+                        result = result[start:end]
+                
+                analysis = json.loads(result)
+                return analysis
+                
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse JSON response: {result}")
+                return {
+                    "has_issues": False,
+                    "issues": "Could not analyze query",
+                    "fixed_query": None
+                }
+            
+        except Exception as e:
+            logger.warning(f"Error analyzing query issues: {e}")
+            return {
+                "has_issues": False,
+                "issues": f"Analysis failed: {str(e)}",
+                "fixed_query": None
+            }
 
 
 # Global instance
