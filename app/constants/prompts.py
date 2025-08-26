@@ -329,3 +329,91 @@ IMPORTANT: Pay attention to the aggregation pipeline order:
 3. $match on joined data should come after $unwind
 
 Return ONLY the corrected MongoDB query, nothing else."""
+
+
+def get_query_check_prompt(query: str, user_query: str, schema_context: str) -> str:
+    """
+    Generate the prompt for checking if a MongoDB query needs validation
+    
+    Args:
+        query (str): The MongoDB query to check
+        user_query (str): User's original natural language question
+        schema_context (str): Schema information for context
+        
+    Returns:
+        str: Complete query check prompt
+    """
+    return f"""
+    Analyze the following MongoDB query and determine if it has ACTUAL ISSUES that need fixing.
+
+    User Query: "{user_query}"
+    Generated MongoDB Query: {query}
+    Schema Context: {schema_context}
+
+    ONLY respond "YES" if you detect ACTUAL PROBLEMS like:
+    1. **SYNTAX ERRORS**: Invalid MongoDB syntax, wrong operators, malformed JSON
+    2. **FIELD MISMATCHES**: Field names in query don't exist in schema
+    3. **DATA TYPE ERRORS**: Using string values for Number fields or vice versa
+    4. **CRITICAL LOGIC ERRORS**: Query logic completely wrong for the user's request
+    5. **MONGODB RULE VIOLATIONS**: $lookup with $ prefixed localField/foreignField, etc.
+
+    DO NOT flag for checking if:
+    - Query is syntactically correct
+    - Field names match schema
+    - Data types are appropriate
+    - Query logic makes sense for the user request
+    - It's just a complex query with multiple stages
+
+    Respond with "YES" ONLY if there are ACTUAL ISSUES that need fixing, otherwise "NO".
+    Give only YES or NO as the answer.
+    """
+
+
+def get_query_analysis_prompt(query: str, user_query: str, schema_context: str) -> str:
+    """
+    Generate the prompt for analyzing MongoDB query issues and suggesting fixes
+    
+    Args:
+        query (str): The MongoDB query to analyze
+        user_query (str): User's original natural language question
+        schema_context (str): Schema information for context
+        
+    Returns:
+        str: Complete query analysis prompt
+    """
+    return f"""
+    Analyze the following MongoDB query for potential issues and suggest improvements:
+
+    User Query: "{user_query}"
+    MongoDB Query: {query}
+    Schema Context: {schema_context}
+
+    Check for:
+    1. Syntax errors
+    2. Field name mismatches with schema
+    3. Incorrect operators usage
+    4. Missing required stages
+    5. Performance issues
+    6. Logic errors
+    7. **DATA TYPE MISMATCHES**:
+       - If schema shows field as Number but query uses string value
+       - If schema shows field as String but query uses numeric value
+       - Convert natural language terms to appropriate data types based on schema
+       - For level/grade fields: check if they should be numeric vs string based on schema
+
+    IMPORTANT MONGODB SYNTAX RULES:
+    - In $lookup stage, localField and foreignField should NOT have $ prefix
+    - Use "localField": "_id" NOT "localField": "$_id"
+    - Use "foreignField": "field_name" NOT "foreignField": "$field_name"
+    - Field references in $project, $group, etc. should use $ prefix
+    - Boolean values should be true/false, not True/False
+
+    Respond in this exact JSON format:
+    {{
+        "has_issues": true/false,
+        "issues": "description of issues found",
+        "fixed_query": "corrected query if issues found, or null"
+    }}
+
+    Only provide the JSON response, nothing else.
+    """

@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
     
     try:
         await db_manager.connect_to_mongo()
-        await db_manager.create_indexes()
+        # await db_manager.create_indexes()
         logger.info("Database connection established")
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")

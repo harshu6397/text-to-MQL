@@ -25,31 +25,8 @@ def sync_ai_identify_relevant_collections(user_query: str, collections: List[str
     Returns:
         List[str]: AI-identified relevant collections
     """
-    import asyncio
-    import concurrent.futures
-    
-    def run_async():
-        # Create a new event loop for this thread
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            return loop.run_until_complete(
-                ai_identify_relevant_collections(user_query, collections)
-            )
-        finally:
-            loop.close()
-    
     try:
-        # Check if we're in an async context
-        try:
-            asyncio.get_running_loop()
-            # If we're here, there's already a running loop
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_async)
-                return future.result(timeout=30)  # 30 second timeout
-        except RuntimeError:
-            # No event loop running, we can create one
-            return asyncio.run(ai_identify_relevant_collections(user_query, collections))
+        return ai_identify_relevant_collections(user_query, collections)
     except Exception as e:
         logger.warning(f"Sync AI collection identification failed: {e}")
         return get_fallback_collections(user_query, collections)
@@ -117,7 +94,7 @@ def get_fallback_collections(user_query: str, collections: List[str]) -> List[st
     return relevant_collections
 
 
-async def ai_identify_relevant_collections(user_query: str, collections: List[str]) -> List[str]:
+def ai_identify_relevant_collections(user_query: str, collections: List[str]) -> List[str]:
     """
     Use AI to identify relevant collections for a user query
     
@@ -135,7 +112,7 @@ async def ai_identify_relevant_collections(user_query: str, collections: List[st
         prompt = get_collection_identification_prompt(user_query, collections)
         
         # Get AI response
-        ai_response = await llm_service.generate_text(prompt)
+        ai_response = llm_service.generate_text(prompt)
         logger.info(f"AI collection identification response: {ai_response}")
         
         # Parse the JSON response
@@ -252,7 +229,7 @@ def apply_collection_limits(relevant_collections: List[str], user_query: str, co
     return relevant_collections
 
 
-async def analyze_collections_for_query(user_query: str, collections: List[str]) -> List[str]:
+def analyze_collections_for_query(user_query: str, collections: List[str]) -> List[str]:
     """
     Complete collection analysis pipeline for a user query using AI with fallback
     
@@ -265,7 +242,7 @@ async def analyze_collections_for_query(user_query: str, collections: List[str])
     """
     try:
         # Step 1: Try AI-powered identification first
-        relevant_collections = await ai_identify_relevant_collections(user_query, collections)
+        relevant_collections = ai_identify_relevant_collections(user_query, collections)
         
         # If AI didn't find any collections, fall back to simple method
         if not relevant_collections:
