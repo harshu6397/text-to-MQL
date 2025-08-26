@@ -1,15 +1,15 @@
 from langchain_cohere import ChatCohere
+from langchain_openai import ChatOpenAI
 from app.core.config import settings
 from app.constants import (
     get_mql_generation_prompt,
     get_query_check_prompt,
     get_query_analysis_prompt,
     DEFAULT_TEMPERATURE,
-    SUCCESS_MESSAGES,
     ERROR_MESSAGES
 )
+from app.services.llm import generate as proxy_generate
 import logging
-import cohere
 
 logger = logging.getLogger(__name__)
 
@@ -17,29 +17,39 @@ logger = logging.getLogger(__name__)
 class LLMService:
     def __init__(self):
         self.llm = None
-        self.cohere_client = None
-
-    def _initialize_cohere(self):
-        """Initialize Cohere client for MQL generation"""
-        if not self.cohere_client:
-            try:
-                self.cohere_client = cohere.Client(settings.COHERE_API_KEY)
-                logger.info(SUCCESS_MESSAGES['COHERE_CLIENT_INITIALIZED'])
-            except Exception as e:
-                logger.error(ERROR_MESSAGES['COHERE_CLIENT_INIT_FAILED'].format(error=str(e)))
-                raise
 
     def initialize_llm(self):
         """Initialize the main LLM for general tasks"""
         try:
-            self.llm = ChatCohere(
-                model=settings.DEFAULT_LLM_MODEL,
-                temperature=0,
-                cohere_api_key=settings.COHERE_API_KEY,
-                streaming=False
-            )
-            logger.info("LLM initialized successfully")
-            return self.llm
+            provider_name = getattr(settings, "DEFAULT_LLM_PROVIDER", "cohere").lower()
+            if provider_name == "cohere":
+                self.llm = ChatCohere(
+                    model=settings.DEFAULT_LLM_MODEL,
+                    temperature=0,
+                    cohere_api_key=settings.COHERE_API_KEY,
+                    streaming=False
+                )
+                logger.info("LLM initialized successfully")
+                return self.llm
+            elif provider_name == "openai":
+                self.llm = ChatOpenAI(
+                    model=settings.OPENAI_MODEL,
+                    temperature=0,
+                    openai_api_key=settings.OPENAI_API_KEY,
+                    streaming=False
+                )
+                logger.info("OpenAI LLM initialized successfully")
+                return self.llm
+            else:
+                logger.warning(f"Unknown LLM provider '{provider_name}', defaulting to Cohere")
+                self.llm = ChatCohere(
+                    model=settings.DEFAULT_LLM_MODEL,
+                    temperature=0,
+                    cohere_api_key=settings.COHERE_API_KEY,
+                    streaming=False
+                )
+                logger.info("LLM initialized successfully")
+                return self.llm
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {str(e)}")
             raise
@@ -57,22 +67,10 @@ class LLMService:
             str: Generated text response
         """
         try:
-            # Initialize Cohere client if not already done
-            self._initialize_cohere()
-            
-            # Generate response using Cohere
-            response = self.cohere_client.generate(
-                model='command-r-plus',
-                prompt=prompt,
-                max_tokens=max_tokens,
-                temperature=temperature
-            )
-            
-            raw_response = response.generations[0].text.strip()
+            # Use the LLM proxy which selects the configured provider
+            raw_response = proxy_generate(prompt, max_tokens=max_tokens, temperature=temperature)
             logger.info(f"Generated text response: {raw_response}")
-            
             return raw_response
-            
         except Exception as e:
             logger.error(f"Error generating text: {e}")
             raise

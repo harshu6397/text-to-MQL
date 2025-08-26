@@ -71,6 +71,10 @@ def get_mql_generation_prompt(target_collection: str, schema_context: str, natur
 
 You are an expert MongoDB query generator. Your task is to convert natural language descriptions into accurate MongoDB Query Language (MQL) queries.
 
+Notes: 
+- you need to build the aggregation pipeline for python code blocks like above.
+- Never add ```python and ``` at the beginning and end of the code block.
+
 ## Instructions
 
 1. **Extract ALL the data from the user's question first** so you understand what they are looking for:
@@ -256,8 +260,6 @@ db.students.aggregate([
     }}
 ])
 ```
-
-Notes: you need to build the aggregation pipeline for python code blocks like above.
 
 ## Schema Context
 Target Collection: {target_collection}

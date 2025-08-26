@@ -13,6 +13,15 @@ class Settings:
     COHERE_API_KEY: str = os.getenv("COHERE_API_KEY", "")
     COHERE_BASE_URL: str = os.getenv("COHERE_BASE_URL", "https://api.cohere.com/v1")
     print("Cohere Key:", COHERE_API_KEY)
+
+    # OpenAI API settings
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    print("OpenAI Key:", OPENAI_API_KEY)
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
+    print("OpenAI Model:", OPENAI_MODEL)
+
+    # LLM Provider settings
+    DEFAULT_LLM_PROVIDER: str = os.getenv("DEFAULT_LLM_PROVIDER", "cohere")
     
     # FastAPI settings
     API_HOST: str = os.getenv("API_HOST", "0.0.0.0")
