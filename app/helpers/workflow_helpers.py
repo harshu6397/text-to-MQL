@@ -52,8 +52,8 @@ def build_workflow_graph(workflow_nodes: Dict[str, Any]) -> StateGraph:
     
     # Both check_query and run_query lead to format_answer
     workflow.add_edge("check_query", "run_query")
-    workflow.add_edge("run_query", "format_answer")
-    workflow.add_edge("format_answer", END)
+    workflow.add_edge("run_query", END)
+    # workflow.add_edge("format_answer", END)
 
     return workflow
 
@@ -75,7 +75,7 @@ def extract_workflow_steps(final_state: Dict[str, Any]) -> List[Dict[str, str]]:
         {"step": "Need Checker", "status": final_state.get("step_status", {}).get("need_checker", "pending")},
         {"step": "Check Query", "status": final_state.get("step_status", {}).get("check_query", "skipped" if not final_state.get("needs_check", False) else "pending")},
         {"step": "Run Query", "status": final_state.get("step_status", {}).get("run_query", "pending")},
-        {"step": "Format Answer", "status": final_state.get("step_status", {}).get("format_answer", "pending")}
+        # {"step": "Format Answer", "status": final_state.get("step_status", {}).get("format_answer", "pending")}
     ]
     return steps
 

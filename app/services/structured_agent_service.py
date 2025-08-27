@@ -95,7 +95,7 @@ class StructuredAgentService:
             "need_checker": self._need_checker_node,
             "check_query": self._check_query_node,
             "run_query": self._run_query_node,
-            "format_answer": self._format_answer_node
+            # "format_answer": self._format_answer_node
         }
         
         # Build workflow using helper
