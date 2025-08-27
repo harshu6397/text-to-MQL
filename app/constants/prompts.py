@@ -71,50 +71,53 @@ def get_mql_generation_prompt(target_collection: str, schema_context: str, natur
 
 You are an expert MongoDB query generator. Your task is to convert natural language descriptions into accurate MongoDB Query Language (MQL) queries.
 
-Notes: 
-- you need to build the aggregation pipeline for python code blocks like above.
-- Never add ```python and ``` at the beginning and end of the code block.
+## Important Notes
+- You need to build the aggregation pipeline for python code blocks like above
+- Never add ```python and ``` at the beginning and end of the code block
 
 ## Instructions
 
-1. **Extract ALL the data from the user's question first** so you understand what they are looking for:
-   - Identify specific IDs, codes, names mentioned (e.g., "CRS_023", "Machine Learning", specific student names)
-   - Extract exact values that should be used in filters (preserve case and format)
-   - Note any specific field values referenced in the query
+### 1. Extract ALL Data from User's Question
+Extract ALL the data from the user's question first so you understand what they are looking for:
+- Identify specific IDs, codes, names mentioned (e.g., "CRS_023", "Machine Learning", specific student names)
+- Extract exact values that should be used in filters (preserve case and format)
+- Note any specific field values referenced in the query
 
-2. **Analyze the natural language input** to understand:
-   - The operation type (find, aggregate, update, delete, etc.)
-   - Filter conditions and criteria
-   - Projection requirements
-   - Sorting, limiting, or grouping needs
-   - Any aggregation pipeline operations
+### 2. Analyze Natural Language Input
+Analyze the natural language input to understand:
+- The operation type (find, aggregate, update, delete, etc.)
+- Filter conditions and criteria
+- Projection requirements
+- Sorting, limiting, or grouping needs
+- Any aggregation pipeline operations
 
-3. **Generate syntactically correct MQL** that:
-   - Uses proper MongoDB syntax and operators
-   - **HANDLES DATA TYPES CORRECTLY** based on schema:
-     * Number fields: Use numeric values (e.g., level: 4, age: 22)
-     * String fields: Use string values (e.g., name: "John Doe", status: "active")
-     * Date fields: Use ISODate format
-     * ObjectId fields: Use ObjectId format
-   - **MAPS NATURAL LANGUAGE TO CORRECT DATA TYPES**:
-     * Check schema to determine if field is Number, String, Date, etc.
-     * Convert text descriptions to appropriate data types based on schema
-     * For level/year fields: map grade levels to numbers if schema shows Number type
-     * Always check field type in schema before creating query conditions
-   - Includes proper field names and collection references
-   - Uses efficient query patterns
-   - **PRESERVES EXACT VALUES** from the user query (e.g., if user says "CRS_023", use "CRS_023" not "CRS_002")
+### 3. Generate Syntactically Correct MQL
+Generate syntactically correct MQL that:
+- Uses proper MongoDB syntax and operators
+- **HANDLES DATA TYPES CORRECTLY** based on schema:
+  * Number fields: Use numeric values (e.g., level: 4, age: 22)
+  * String fields: Use string values (e.g., name: "John Doe", status: "active")
+  * Date fields: Use ISODate format
+  * ObjectId fields: Use ObjectId format
+- **MAPS NATURAL LANGUAGE TO CORRECT DATA TYPES**:
+  * Check schema to determine if field is Number, String, Date, etc.
+  * Convert text descriptions to appropriate data types based on schema
+  * For level/year fields: map grade levels to numbers if schema shows Number type
+  * Always check field type in schema before creating query conditions
+- Includes proper field names and collection references
+- Uses efficient query patterns
+- **PRESERVES EXACT VALUES** from the user query (e.g., if user says "CRS_023", use "CRS_023" not "CRS_002")
 
-4. **Important Rules:**
-   - Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
-   - Use ONLY aggregate() syntax, not find()
-   - For queries with words like "first", "earliest", "oldest", use $sort with ascending order (1) and $limit: 1
-   - For queries with words like "last", "latest", "newest", use $sort with descending order (-1) and $limit: 1
-   - For queries asking "how many", "count", "total", use $count
-   - Always return just the aggregate command starting with db.{target_collection}.aggregate()
-   - Use double quotes for all string values and field names
-   - **PAY ATTENTION TO AGGREGATION PIPELINE ORDER**: $lookup must come before you can reference the joined data in $match
-   - Use JSON boolean values: true/false (not True/False)
+### 4. Important Rules
+- Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
+- Use ONLY aggregate() syntax, not find()
+- For queries with words like "first", "earliest", "oldest", use $sort with ascending order (1) and $limit: 1
+- For queries with words like "last", "latest", "newest", use $sort with descending order (-1) and $limit: 1
+- For queries asking "how many", "count", "total", use $count
+- Always return just the aggregate command starting with db.{target_collection}.aggregate()
+- Use double quotes for all string values and field names
+- **PAY ATTENTION TO AGGREGATION PIPELINE ORDER**: $lookup must come before you can reference the joined data in $match
+- Use JSON boolean values: true/false (not True/False)
 
 ## Common MQL Operators Reference
 
@@ -151,7 +154,8 @@ Notes:
 
 ## Examples
 
-### Input: "Find all users who are older than 25 and live in New York"
+### Example 1: Basic Filtering
+**Input:** "Find all users who are older than 25 and live in New York"
 ```python
 db.users.aggregate([
   {{
@@ -163,7 +167,8 @@ db.users.aggregate([
 ])
 ```
 
-### Input: "Get the total number of orders by status, sorted by count descending"
+### Example 2: Grouping and Sorting
+**Input:** "Get the total number of orders by status, sorted by count descending"
 ```python
 db.orders.aggregate([
   {{
@@ -178,7 +183,8 @@ db.orders.aggregate([
 ])
 ```
 
-### Input: "Show me student names and ages who are enrolled in course CRS_023"
+### Example 3: Joins with Lookup
+**Input:** "Show me student names and ages who are enrolled in course CRS_023"
 ```python
 db.students.aggregate([
   {{
@@ -209,7 +215,8 @@ db.students.aggregate([
 ])
 ```
 
-### Input: "Find all courses in Mathematics department"
+### Example 4: Complex Join with Department
+**Input:** "Find all courses in Mathematics department"
 ```python
 db.courses.aggregate([
   {{
@@ -244,12 +251,14 @@ db.courses.aggregate([
 ])
 ```
 
-### Input: "How many departments do we have?"
+### Example 5: Count Query
+**Input:** "How many departments do we have?"
 ```python
 db.departments.aggregate([{{"$count": "total"}}])
 ```
 
-### What is the average GPA of all students?
+### Example 6: Average Calculation
+**Input:** "What is the average GPA of all students?"
 ```python
 db.students.aggregate([
     {{
@@ -274,13 +283,17 @@ Convert the following natural language query into MQL:
 Return ONLY the Single MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.{target_collection}.aggregate()"""
 
 
-FORMAT_ANSWER_PROMPT = """You are a helpful assistant that converts database query results into natural language answers.
+FORMAT_ANSWER_PROMPT = """# Format Database Query Results
 
-User's original question: "{user_query}"
+You are a helpful assistant that converts database query results into natural language answers.
 
-Database query result: {query_result}
+## User's Original Question
+"{user_query}"
 
-Instructions:
+## Database Query Result
+{query_result}
+
+## Instructions
 1. Provide a clear, concise answer to the user's question
 2. If the result is a number, state it clearly with context
 3. If the result is a list, format it nicely (use bullets if more than 3 items)
@@ -288,49 +301,9 @@ Instructions:
 5. Be conversational and helpful
 6. Don't mention technical details about MongoDB or the query
 
+## Your Response
 Provide only the natural language answer:"""
 
-
-def get_query_fix_prompt(query: str, user_query: str, schema_context: str) -> str:
-    """
-    Generate the query fix prompt for when a query returns empty results
-    
-    Args:
-        query (str): The MongoDB query that returned empty results
-        user_query (str): User's original natural language question
-        schema_context (str): Schema information for context
-        
-    Returns:
-        str: Complete query fix prompt
-    """
-    return f"""The following MongoDB query returned empty results:
-
-Query: {query}
-
-User's original question: {user_query}
-
-Available collections and schemas:
-{schema_context}
-
-Extract all the data from the user's question first so you understand what they are looking for.
-
-Please check the query and fix any issues. Common problems include:
-- Wrong data extracted from the initial user question (e.g., wrong course ID, wrong names)
-- As we are using python, so ensure that the query must use the python syntax for db.collection.aggregate([...]) and keywords like None, True, False etc
-- Wrong localField in $lookup (should match the actual field name, not _id)
-- Wrong collection names
-- Wrong field names
-- Incorrect matching conditions
-- Logical errors in the aggregation pipeline (e.g., $match before $lookup)
-- Missing or extra brackets/parentheses
-- Wrong pipeline stage order
-
-IMPORTANT: Pay attention to the aggregation pipeline order:
-1. $lookup must come BEFORE you can reference the joined data in $match
-2. $unwind should come after $lookup
-3. $match on joined data should come after $unwind
-
-Return ONLY the corrected MongoDB query, nothing else."""
 
 
 def get_query_check_prompt(query: str, user_query: str, schema_context: str) -> str:
@@ -345,30 +318,47 @@ def get_query_check_prompt(query: str, user_query: str, schema_context: str) -> 
     Returns:
         str: Complete query check prompt
     """
-    return f"""
-    Analyze the following MongoDB query and determine if it has ACTUAL ISSUES that need fixing.
+    return f"""# MongoDB Query Validation Check
 
-    User Query: "{user_query}"
-    Generated MongoDB Query: {query}
-    Schema Context: {schema_context}
+## Task
+Analyze the following MongoDB query and determine if it has ACTUAL ISSUES that need fixing.
 
-    ONLY respond "YES" if you detect ACTUAL PROBLEMS like:
-    1. **SYNTAX ERRORS**: Invalid MongoDB syntax, wrong operators, malformed JSON
-    2. **FIELD MISMATCHES**: Field names in query don't exist in schema
-    3. **DATA TYPE ERRORS**: Using string values for Number fields or vice versa
-    4. **CRITICAL LOGIC ERRORS**: Query logic completely wrong for the user's request
-    5. **MONGODB RULE VIOLATIONS**: $lookup with $ prefixed localField/foreignField, etc.
+## Query Information
+**User Query:** "{user_query}"
+**Generated MongoDB Query:** {query}
+**Schema Context:** {schema_context}
 
-    DO NOT flag for checking if:
-    - Query is syntactically correct
-    - Field names match schema
-    - Data types are appropriate
-    - Query logic makes sense for the user request
-    - It's just a complex query with multiple stages
+## Check for ACTUAL PROBLEMS Only
+ONLY respond "YES" if you detect ACTUAL PROBLEMS like:
 
-    Respond with "YES" ONLY if there are ACTUAL ISSUES that need fixing, otherwise "NO".
-    Give only YES or NO as the answer.
-    """
+### 1. Syntax Errors
+- Invalid MongoDB syntax
+- Wrong operators
+- Malformed JSON
+
+### 2. Field Mismatches
+- Field names in query don't exist in schema
+
+### 3. Data Type Errors
+- Using string values for Number fields or vice versa
+
+### 4. Critical Logic Errors
+- Query logic completely wrong for the user's request
+
+### 5. MongoDB Rule Violations
+- $lookup with $ prefixed localField/foreignField, etc.
+
+## DO NOT Flag These
+DO NOT flag for checking if:
+- Query is syntactically correct
+- Field names match schema
+- Data types are appropriate
+- Query logic makes sense for the user request
+- It's just a complex query with multiple stages
+
+## Response Format
+Respond with "YES" ONLY if there are ACTUAL ISSUES that need fixing, otherwise "NO".
+Give only YES or NO as the answer."""
 
 
 def get_query_analysis_prompt(query: str, user_query: str, schema_context: str) -> str:
@@ -383,46 +373,56 @@ def get_query_analysis_prompt(query: str, user_query: str, schema_context: str) 
     Returns:
         str: Complete query analysis prompt
     """
-    return f"""
-    Analyze the following MongoDB query for potential issues and suggest improvements:
+    return f"""# MongoDB Query Analysis and Fix
 
-    User Query: "{user_query}"
-    MongoDB Query: {query}
-    Schema Context: {schema_context}
+## Query Information
+**User Query:** "{user_query}"
+**MongoDB Query:** {query}
+**Schema Context:** {schema_context}
 
-    Check for:
-    1. Syntax errors
-    2. Field name mismatches with schema
-    3. Incorrect operators usage
-    4. Missing required stages
-    5. Performance issues
-    6. Logic errors
-    7. **DATA TYPE MISMATCHES**:
-       - If schema shows field as Number but query uses string value
-       - If schema shows field as String but query uses numeric value
-       - Convert natural language terms to appropriate data types based on schema
-       - For level/grade fields: check if they should be numeric vs string based on schema
+## Analysis Checklist
+Check for:
 
-    IMPORTANT MONGODB SYNTAX RULES:
-    - In $lookup stage, localField and foreignField should NOT have $ prefix
-    - Use "localField": "_id" NOT "localField": "$_id"
-    - Use "foreignField": "field_name" NOT "foreignField": "$field_name"
-    - Field references in $project, $group, etc. should use $ prefix
-    - Boolean values should be true/false, not True/False
+### 1. Syntax Issues
+- Syntax errors
+- Field name mismatches with schema
+- Incorrect operators usage
 
+### 2. Structural Issues
+- Missing required stages
+- Performance issues
+- Logic errors
 
-    Notes: 
-    - you need to build the aggregation pipeline for python code blocks like above.
-    - Never add ```python and ``` at the beginning and end of the code block.
+### 3. Data Type Issues
+**DATA TYPE MISMATCHES:**
+- If schema shows field as Number but query uses string value
+- If schema shows field as String but query uses numeric value
+- Convert natural language terms to appropriate data types based on schema
+- For level/grade fields: check if they should be numeric vs string based on schema
 
-    Return ONLY the Single MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.target_collection.aggregate()
+### 4. MongoDB Syntax Rules
+**IMPORTANT MONGODB SYNTAX RULES:**
+- In $lookup stage, localField and foreignField should NOT have $ prefix
+- Use "localField": "_id" NOT "localField": "$_id"
+- Use "foreignField": "field_name" NOT "foreignField": "$field_name"
+- Field references in $project, $group, etc. should use $ prefix
+- Boolean values should be true/false, not True/False
 
-    Respond in this exact JSON format:
-    {{
-        "has_issues": true/false,
-        "issues": "description of issues found",
-        "fixed_query": "corrected query if issues found, or null"
-    }}
+## Important Notes
+- You need to build the aggregation pipeline for python code blocks like above
+- Never add ```python and ``` at the beginning and end of the code block
 
-    Only provide the JSON response, nothing else.
-    """
+## Response Requirements
+Return ONLY the Single MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.target_collection.aggregate()
+
+## Response Format
+Respond in this exact JSON format:
+```json
+{{
+    "has_issues": true/false,
+    "issues": "description of issues found",
+    "fixed_query": "corrected query if issues found, or null"
+}}
+```
+
+Only provide the JSON response, nothing else."""

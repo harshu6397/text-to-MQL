@@ -13,7 +13,6 @@ __all__ = [
     'get_mql_generation_prompt',
     'get_collection_identification_prompt',
     'FORMAT_ANSWER_PROMPT',
-    'get_query_fix_prompt',
     'get_query_check_prompt',
     'get_query_analysis_prompt',
     
