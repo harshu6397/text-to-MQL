@@ -271,7 +271,7 @@ Convert the following natural language query into MQL:
 
 **Input:** {natural_language_query}
 
-Return ONLY the MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.{target_collection}.aggregate()"""
+Return ONLY the Single MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.{target_collection}.aggregate()"""
 
 
 FORMAT_ANSWER_PROMPT = """You are a helpful assistant that converts database query results into natural language answers.
@@ -409,6 +409,13 @@ def get_query_analysis_prompt(query: str, user_query: str, schema_context: str) 
     - Use "foreignField": "field_name" NOT "foreignField": "$field_name"
     - Field references in $project, $group, etc. should use $ prefix
     - Boolean values should be true/false, not True/False
+
+
+    Notes: 
+    - you need to build the aggregation pipeline for python code blocks like above.
+    - Never add ```python and ``` at the beginning and end of the code block.
+
+    Return ONLY the Single MongoDB aggregate command. Do not include any explanations, comments, or additional text. Just the command starting with db.target_collection.aggregate()
 
     Respond in this exact JSON format:
     {{

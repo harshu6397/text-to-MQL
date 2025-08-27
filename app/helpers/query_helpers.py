@@ -33,6 +33,9 @@ def fix_query_syntax(query: str) -> str:
     query = query.replace(': false', ': False')
     query = query.replace(': true', ': True')
     query = query.replace(': null', ': None')
+    query = query.replace('true', 'True')
+    query = query.replace('false', 'False')
+    query = query.replace('null', 'None')
     
     # Fix incomplete queries
     if query.startswith('db.') and query.count('[') > query.count(']'):
