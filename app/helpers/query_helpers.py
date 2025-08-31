@@ -30,9 +30,6 @@ def fix_query_syntax(query: str) -> str:
     query = query.replace("'", '"')  # Replace single quotes with double quotes
     
     # Fix JSON boolean values that should be Python boolean values
-    query = query.replace(': false', ': False')
-    query = query.replace(': true', ': True')
-    query = query.replace(': null', ': None')
     query = query.replace('true', 'True')
     query = query.replace('false', 'False')
     query = query.replace('null', 'None')

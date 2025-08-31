@@ -30,8 +30,25 @@ def build_workflow_graph(workflow_nodes: Dict[str, Any]) -> StateGraph:
     # Define the workflow edges with conditional routing
     workflow.add_edge(START, "list_collections")
     workflow.add_edge("list_collections", "get_schema")
+    
+    # Conditional edge from generate_query
+    def decide_after_generate_query(state: MessagesState):
+        """Decide whether query was denied or should proceed to need_checker"""
+        if state.get("step_status", {}).get("generate_query") == "denied":
+            return END
+        else:
+            return "need_checker"
+    
+    workflow.add_conditional_edges(
+        "generate_query",
+        decide_after_generate_query,
+        {
+            "need_checker": "need_checker",
+            END: END
+        }
+    )
+    
     workflow.add_edge("get_schema", "generate_query")
-    workflow.add_edge("generate_query", "need_checker")
     
     # Conditional edge from need_checker
     def decide_next_step(state: MessagesState):

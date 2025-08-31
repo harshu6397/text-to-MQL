@@ -81,7 +81,7 @@ async function submitQuery() {
         if (data.success) {
             displayResults(data);
         } else {
-            displayError(data.error || 'Query failed');
+            displayError(data.error || data.formatted_answer || 'Query failed');
         }
 
     } catch (error) {

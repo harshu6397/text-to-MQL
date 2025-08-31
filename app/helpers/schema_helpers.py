@@ -25,12 +25,18 @@ def prepare_schema_context(schema_info: Dict[str, str]) -> str:
         # Enhance schema with data type guidance
         enhanced_schema = f"Collection '{collection}':\n{schema}"
         
-        # Add data type mapping guidance
-        enhanced_schema += "\n\nDATA TYPE MAPPING GUIDANCE:"
-        enhanced_schema += "\n- If field type is 'Number': Use integer values (e.g., level: 4, age: 22)"
-        enhanced_schema += "\n- If field type is 'String': Use string values (e.g., name: \"John Doe\")"
-        enhanced_schema += "\n- If field type is 'Date': Use ISODate format"
-        enhanced_schema += "\n- If field type is 'ObjectId': Use ObjectId format"
+        # Add data type mapping guidance from schema instructions
+        try:
+            from app.constants.schema_instructions import get_data_type_mapping_guide
+            data_type_guide = get_data_type_mapping_guide()
+            enhanced_schema += f"\n\n{data_type_guide}"
+        except ImportError:
+            # Fallback to basic guidance if schema instructions not available
+            enhanced_schema += "\n\nDATA TYPE MAPPING GUIDANCE:"
+            enhanced_schema += "\n- If field type is 'Number': Use integer values (e.g., level: 4, age: 22)"
+            enhanced_schema += "\n- If field type is 'String': Use string values (e.g., name: \"John Doe\")"
+            enhanced_schema += "\n- If field type is 'Date': Use ISODate format"
+            enhanced_schema += "\n- If field type is 'ObjectId': Use ObjectId format"
         
         schema_parts.append(enhanced_schema)
     

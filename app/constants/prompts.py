@@ -55,6 +55,21 @@ These are generic examples - adapt them based on the actual collections and sche
 ## Your Response
 Based on the user query above, identify the relevant collections:"""
 
+def check_query_permissions(natural_language_query: str) -> tuple[bool, str]:
+    """
+    Check if the user query is allowed (read-only operations)
+    
+    Args:
+        natural_language_query (str): User's natural language query
+        
+    Returns:
+        tuple[bool, str]: (is_allowed, denial_message_if_not_allowed)
+    """
+    from .schema_instructions import check_for_write_operations
+    
+    is_write, denial_message = check_for_write_operations(natural_language_query)
+    return not is_write, denial_message
+
 def get_mql_generation_prompt(target_collection: str, schema_context: str, natural_language_query: str) -> str:
     """
     Generate the MQL generation prompt with dynamic values
@@ -67,13 +82,24 @@ def get_mql_generation_prompt(target_collection: str, schema_context: str, natur
     Returns:
         str: Complete MQL generation prompt
     """
+    # Import schema instructions to include in the prompt
+    from .schema_instructions import get_schema_aware_instructions
+    
+    schema_instructions = get_schema_aware_instructions()
+    
     return f"""# MongoDB Query Language (MQL) Generation Prompt
 
 You are an expert MongoDB query generator. Your task is to convert natural language descriptions into accurate MongoDB Query Language (MQL) queries.
 
+## CRITICAL REQUIREMENTS (ALWAYS ENFORCE)
+1. **ACTIVE RECORDS ONLY**: Every query MUST include a filter for active records only. Add {{"status": "active"}} or {{"is_active": true}} to all $match stages.
+2. **READ-ONLY OPERATIONS**: Only generate read operations (aggregate, find, count). If user requests write operations (insert, update, delete), respond with the denial message from schema instructions.
+
 ## Important Notes
 - You need to build the aggregation pipeline for python code blocks like above
 - Never add ```python and ``` at the beginning and end of the code block
+
+{schema_instructions}
 
 ## Instructions
 
@@ -373,12 +399,21 @@ def get_query_analysis_prompt(query: str, user_query: str, schema_context: str) 
     Returns:
         str: Complete query analysis prompt
     """
+    # Import schema instructions for analysis
+    from .schema_instructions import get_data_type_mapping_guide, MONGODB_SYNTAX_INSTRUCTIONS
+    
+    data_type_guide = get_data_type_mapping_guide()
+    
     return f"""# MongoDB Query Analysis and Fix
 
 ## Query Information
 **User Query:** "{user_query}"
 **MongoDB Query:** {query}
 **Schema Context:** {schema_context}
+
+{data_type_guide}
+
+{MONGODB_SYNTAX_INSTRUCTIONS}
 
 ## Analysis Checklist
 Check for:

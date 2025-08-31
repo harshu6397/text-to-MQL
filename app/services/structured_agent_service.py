@@ -224,6 +224,24 @@ class StructuredAgentService:
         logger.info("Step 3: Generating MongoDB aggregation pipeline using Cohere MQL generator...")
         
         try:
+            # Check for write operations first
+            from app.constants import check_for_write_operations
+            is_write, denial_message = check_for_write_operations(state["user_query"])
+            
+            if is_write:
+                # Return the denial message as the formatted answer and mark as complete
+                state["formatted_answer"] = denial_message
+                state["mql_query"] = ""
+                state["query_result"] = None
+                state["step_status"]["generate_query"] = "denied"
+                
+                # Add denial message to conversation
+                ai_message = AIMessage(content=denial_message)
+                state["messages"].append(ai_message)
+                
+                logger.info(f"Query denied - write operation detected: {state['user_query']}")
+                return state
+            
             # Prepare schema context for the MQL generator using helper
             schema_context = prepare_schema_context(state["schema_info"])
             
@@ -284,6 +302,13 @@ class StructuredAgentService:
         logger.info("Step: Checking if query needs validation...")
         
         try:
+            # Check if query was denied
+            if state.get("step_status", {}).get("generate_query") == "denied":
+                logger.info("Query was denied, skipping need checker")
+                state["needs_check"] = False
+                state["step_status"]["need_checker"] = "skipped"
+                return state
+            
             if not state["mql_query"]:
                 # If no query generated, skip checking
                 state["needs_check"] = False
@@ -399,6 +424,12 @@ class StructuredAgentService:
         logger.info("Step: Executing MongoDB query...")
         
         try:
+            # Check if query was denied
+            if state.get("step_status", {}).get("generate_query") == "denied":
+                logger.info("Query was denied, skipping execution")
+                state["step_status"]["run_query"] = "skipped"
+                return state
+            
             if not state["mql_query"]:
                 raise Exception(ERROR_MESSAGES['NO_QUERY_TO_EXECUTE'])
             
