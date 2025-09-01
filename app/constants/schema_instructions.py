@@ -26,6 +26,12 @@ SCHEMA_INTERPRETATION_INSTRUCTIONS = """
   - Any $out or $merge pipeline stages
 - If user requests write operations, respond with: "I can't help with that type of request. Let me know if you'd like to search for or view any data instead!"
 
+**EXCLUDE _ID FIELDS:**
+- NEVER include "_id" fields in query results unless user specifically requests IDs
+- Always use "_id": 0 in $project stages to exclude _id fields
+- Only include _id if user explicitly asks for "ID", "identifier", or "_id" in their query
+- This keeps results clean and focuses on meaningful data
+
 ### 1. Data Type Mapping Rules
 When converting natural language to MQL queries, follow these strict data type rules:
 
@@ -93,6 +99,11 @@ MONGODB_SYNTAX_INSTRUCTIONS = """
 - Use ONLY these operations: aggregate, find, count
 - NEVER use: insert, update, delete, $out, $merge
 - If user asks for write operations, deny with message
+
+**Exclude _ID Fields:**
+- Always exclude "_id" from results unless user specifically requests IDs
+- Use "_id": 0 in $project stages
+- Only include _id when user asks for "ID", "identifier", or "_id" explicitly
 
 ### 2. Aggregation Pipeline Structure
 **Required Order for Complex Queries:**
@@ -200,6 +211,11 @@ DATA_VALIDATION_INSTRUCTIONS = """
 - [ ] No write operations present (insert, update, delete)
 - [ ] No prohibited pipeline stages ($out, $merge)
 
+**_ID Field Exclusion:**
+- [ ] "_id" fields are excluded from results unless user specifically requests IDs
+- [ ] $project stages include "_id": 0 when projecting fields
+- [ ] Only include _id when user explicitly asks for identifiers
+
 ### 2. Schema Compliance
 **Before generating queries:**
 - Verify all field names exist in target collections
@@ -224,6 +240,7 @@ DATA_VALIDATION_INSTRUCTIONS = """
 - [ ] Syntax follows MongoDB rules
 - [ ] Query addresses the user's question
 - [ ] NO write operations present
+- [ ] "_id" fields are excluded unless user specifically requests IDs
 """
 
 def get_schema_aware_instructions() -> str:
@@ -249,6 +266,8 @@ These instructions ensure that generated MongoDB queries:
 3. Follow MongoDB best practices
 4. Produce efficient and accurate results
 5. Handle edge cases appropriately
+6. Exclude unnecessary _id fields from results
+7. Only return active/non-deleted records
 
 Always refer to the actual schema provided for specific field names, types, and relationships.
 """

@@ -81,6 +81,34 @@ def find_date_fields_in_schema(schema_context: str) -> List[str]:
     return date_fields
 
 
+def convert_python_to_mongodb_query(query: str) -> str:
+    """
+    Convert Python-formatted MongoDB query back to MongoDB console format
+    
+    Args:
+        query: Python-formatted MongoDB query string
+        
+    Returns:
+        str: MongoDB console formatted query string
+    """
+    if not query:
+        return query
+        
+    # Remove extra whitespace
+    mongo_query = query.strip()
+    
+    # Convert Python boolean values back to MongoDB JSON boolean values
+    mongo_query = mongo_query.replace('True', 'true')
+    mongo_query = mongo_query.replace('False', 'false')
+    mongo_query = mongo_query.replace('None', 'null')
+    
+    # Ensure proper JSON formatting (double quotes instead of single quotes)
+    # This should already be done, but ensure consistency
+    mongo_query = mongo_query.replace("'", '"')
+    
+    return mongo_query
+
+
 def regenerate_query(user_query: str, schema_context: str, target_collection: str) -> str:
     """
     Regenerate a simpler query when the original fails

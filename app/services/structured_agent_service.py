@@ -559,10 +559,13 @@ class StructuredAgentService:
             # Check if workflow completed successfully using helper
             workflow_success = check_workflow_success(final_state)
             
+            from app.helpers.query_helpers import convert_python_to_mongodb_query
+            mongodb_formatted_query = convert_python_to_mongodb_query(final_state.get("mql_query", ""))
+            
             return {
                 "success": workflow_success,
                 "query": query,
-                "generated_mql": final_state.get("mql_query", ""),
+                "generated_mql": mongodb_formatted_query, 
                 "results": parse_results(final_state.get("query_result", [])),
                 "formatted_answer": final_state.get("formatted_answer", ""),
                 "error": final_state.get("error_info"),

@@ -78,7 +78,7 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     success: bool = Field(..., description="Whether query was successful")
     query: str = Field(..., description="Original query")
-    generated_mql: Optional[str] = Field(None, description="Generated MongoDB query")
+    generated_mql: Optional[str] = Field(None, description="Generated MongoDB query in MongoDB console format (ready to run in MongoDB shell)")
     results: List[Dict[str, Any]] = Field(..., description="Query results")
     formatted_answer: Optional[str] = Field(None, description="Natural language formatted answer")
     error: Optional[str] = Field(None, description="Error message if any")
