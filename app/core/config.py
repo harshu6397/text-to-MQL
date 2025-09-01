@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from app.utils.logger import logger
 
 load_dotenv()
 
@@ -12,13 +13,10 @@ class Settings:
     # Cohere API settings
     COHERE_API_KEY: str = os.getenv("COHERE_API_KEY", "")
     COHERE_BASE_URL: str = os.getenv("COHERE_BASE_URL", "https://api.cohere.com/v1")
-    print("Cohere Key:", COHERE_API_KEY)
 
     # OpenAI API settings
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-    print("OpenAI Key:", OPENAI_API_KEY)
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "gpt-4o")
-    print("OpenAI Model:", OPENAI_MODEL)
 
     # LLM Provider settings
     DEFAULT_LLM_PROVIDER: str = os.getenv("DEFAULT_LLM_PROVIDER", "cohere")
@@ -43,3 +41,9 @@ class Settings:
 
 
 settings = Settings()
+
+# Log configuration details at debug level only
+logger.debug(f"Cohere API Key configured: {'Yes' if settings.COHERE_API_KEY else 'No'}")
+logger.debug(f"OpenAI API Key configured: {'Yes' if settings.OPENAI_API_KEY else 'No'}")
+logger.debug(f"OpenAI Model: {settings.OPENAI_MODEL}")
+logger.debug(f"Default LLM Provider: {settings.DEFAULT_LLM_PROVIDER}")

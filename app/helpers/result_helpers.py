@@ -1,8 +1,6 @@
 from typing import Any, List, Dict
 import json
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 def is_empty_result(result: Any) -> bool:

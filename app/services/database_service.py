@@ -1,9 +1,7 @@
 from app.core.database import db_manager
 from app.core.config import settings
 from typing import Dict, Any, List
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class DatabaseService:

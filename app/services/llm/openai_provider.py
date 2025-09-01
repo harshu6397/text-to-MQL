@@ -1,9 +1,8 @@
 from typing import Optional
-import logging
 import openai
 from app.core.config import settings
+from app.utils.logger import logger
 
-logger = logging.getLogger(__name__)
 
 
 class OpenAIProvider:
@@ -22,6 +21,6 @@ class OpenAIProvider:
             stream=False,
         )
 
-        print("response.choices[0].message: ", response.choices[0].message.content)
+        logger.debug(f"OpenAI response: {response.choices[0].message.content}")
         # response.choices[0].text is the typical structure
         return response.choices[0].message.content.strip()

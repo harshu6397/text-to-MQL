@@ -1,9 +1,7 @@
 from typing import Optional
-import logging
 import cohere
 from app.core.config import settings
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class CohereProvider:

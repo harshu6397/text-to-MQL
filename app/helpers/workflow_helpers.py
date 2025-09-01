@@ -3,9 +3,7 @@ Workflow Management Helper Functions
 """
 from typing import Dict, List, Any
 from langgraph.graph import StateGraph, START, END
-import logging
 
-logger = logging.getLogger(__name__)
 
 
 def build_workflow_graph(workflow_nodes: Dict[str, Any]) -> StateGraph:

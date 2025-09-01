@@ -21,10 +21,8 @@ from app.constants import (
     ERROR_MESSAGES
 )
 from typing import Dict, Any, List, TypedDict, Optional
-import logging
 import time
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class MessagesState(TypedDict):

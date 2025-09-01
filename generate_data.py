@@ -22,11 +22,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.utils.data_generator import DataGenerator
 from app.core.database import db_manager
+from app.utils.logger import logger
 
 
 async def main():
     """Main function to generate sample data"""
-    print("🚀 Starting Text-to-MQL Sample Data Generation...")
+    logger.info("🚀 Starting Text-to-MQL Sample Data Generation...")
     
     try:
         # Connect to database

@@ -2,9 +2,7 @@ from app.services.structured_agent_service import structured_agent_service
 from app.services.database_service import database_service
 from app.models.schemas import QueryRequest, QueryResponse
 from typing import Dict, Any
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class QueryController:

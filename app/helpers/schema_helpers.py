@@ -2,9 +2,7 @@
 Schema Analysis Helper Functions
 """
 from typing import Dict, List, Any
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger 
 
 
 def prepare_schema_context(schema_info: Dict[str, str]) -> str:

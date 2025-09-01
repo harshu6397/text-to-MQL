@@ -1,8 +1,7 @@
 """
 Collection Analysis Helper Functions - Fully Dynamic
 """
-from typing import List, Dict, Any
-import logging
+from typing import List, Dict
 import json
 from app.constants import (
     MAX_COLLECTIONS_TO_ANALYZE,
@@ -10,8 +9,7 @@ from app.constants import (
 )
 from app.constants.prompts import get_collection_identification_prompt
 from app.services.llm_service import LLMService
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 def sync_ai_identify_relevant_collections(user_query: str, collections: List[str]) -> List[str]:

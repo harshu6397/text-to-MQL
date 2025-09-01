@@ -9,9 +9,7 @@ from app.constants import (
     ERROR_MESSAGES
 )
 from app.services.llm import generate as proxy_generate
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 class LLMService:
@@ -95,7 +93,7 @@ class LLMService:
             # Use the generate_text method with appropriate parameters for MQL generation
             raw_response = self.generate_text(prompt, max_tokens=1000, temperature=DEFAULT_TEMPERATURE)
 
-            print("Raw response from Cohere:", raw_response)  # Debug print
+            logger.debug(f"Raw response from Cohere: {raw_response}")
             
             return raw_response
             

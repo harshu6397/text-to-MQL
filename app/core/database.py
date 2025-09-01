@@ -1,10 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 from app.core.config import settings
-import logging
-
-logger = logging.getLogger(__name__)
-
+from app.utils.logger import logger
 
 class DatabaseManager:
     def __init__(self):

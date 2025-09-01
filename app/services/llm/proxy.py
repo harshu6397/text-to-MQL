@@ -1,9 +1,7 @@
 from app.core.config import settings
 from .cohere_provider import CohereProvider
 from .openai_provider import OpenAIProvider
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 
 
 _provider = None

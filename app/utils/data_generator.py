@@ -1,12 +1,8 @@
-import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from faker import Faker
 from app.core.database import db_manager
-from app.core.config import settings
-import logging
-
-logger = logging.getLogger(__name__)
+from app.utils.logger import logger
 fake = Faker()
 
 

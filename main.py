@@ -1,16 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-import logging
 import os
 
 from app.core.database import db_manager
 from app.routes import structured_routes, database_routes
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
+from app.utils.logger import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
