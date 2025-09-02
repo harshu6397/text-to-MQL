@@ -138,6 +138,8 @@ Generate syntactically correct MQL that:
 ### 4. Important Rules
 - Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
 - Use ONLY aggregate() syntax, not find()
+- **USE CASE-INSENSITIVE MATCHING for names and descriptive text**: Use {{"field": {{"$regex": "value", "$options": "i"}}}} for better user experience
+- **PRESERVE EXACT VALUES for IDs, codes, and enum values**: Use exact matching like {{"course_id": "CRS_023"}} for precise identifiers
 - For queries with words like "first", "earliest", "oldest", use $sort with ascending order (1) and $limit: 1
 - For queries with words like "last", "latest", "newest", use $sort with descending order (-1) and $limit: 1
 - For queries asking "how many", "count", "total", use $count
@@ -294,6 +296,48 @@ db.students.aggregate([
         "averageGPA": {{ "$avg": "$gpa" }}
         }}
     }}
+])
+```
+
+### Example 7: Case-Insensitive Name Search
+**Input:** "Find information about user named Apollo"
+```python
+db.users.aggregate([
+  {{{{
+    "$match": {{{{
+      "firstName": {{{{"$regex": "Apollo", "$options": "i"}}}},
+      "status": "active"
+    }}}}
+  }}}}
+])
+```
+
+### Example 8: Case-Insensitive Full Name Search  
+**Input:** "Show me details for Apollo Otika"
+```python
+db.users.aggregate([
+  {{{{
+    "$match": {{{{
+      "$and": [
+        {{{{"firstName": {{{{"$regex": "Apollo", "$options": "i"}}}}}}}},
+        {{{{"lastName": {{{{"$regex": "Otika", "$options": "i"}}}}}}}}
+      ],
+      "status": "active"
+    }}}}
+  }}}}
+])
+```
+
+### Example 9: Case-Insensitive Department Search
+**Input:** "List all courses in computer science department"
+```python
+db.courses.aggregate([
+  {{{{
+    "$match": {{{{
+      "department_name": {{{{"$regex": "computer science", "$options": "i"}}}},
+      "status": "active"
+    }}}}
+  }}}}
 ])
 ```
 

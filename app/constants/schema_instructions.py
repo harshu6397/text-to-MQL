@@ -42,10 +42,12 @@ When converting natural language to MQL queries, follow these strict data type r
 - Academic years: "2023" → year: 2023 (numeric, not string)
 
 **String Fields:**
-- Preserve exact text values in quotes
-- Examples: "John Doe" → name: "John Doe", "active" → status: "active"
-- Course codes: "CRS_023" → course_id: "CRS_023" (preserve exact format)
-- Department names: "Computer Science" → dept_name: "Computer Science"
+- For exact values like IDs, codes, and status: preserve exact text values in quotes
+- Examples: "CRS_023" → course_id: "CRS_023" (preserve exact format), "active" → status: "active"
+- For names and descriptive text: use case-insensitive regex matching for better user experience
+- Examples: "John Doe" → name: {"$regex": "John Doe", "$options": "i"}
+- Department names: "Computer Science" → dept_name: {"$regex": "Computer Science", "$options": "i"}
+- User names: "chinmay" → firstName: {"$regex": "chinmay", "$options": "i"}
 
 **Date Fields:**
 - Convert to proper MongoDB date format
@@ -99,6 +101,15 @@ MONGODB_SYNTAX_INSTRUCTIONS = """
 - Use ONLY these operations: aggregate, find, count
 - NEVER use: insert, update, delete, $out, $merge
 - If user asks for write operations, deny with message
+
+**Case-Insensitive Text Matching:**
+- For user names, person names, titles, and descriptive text: use regex with case-insensitive option
+- Pattern: {"field_name": {"$regex": "search_term", "$options": "i"}}
+- Examples:
+  - "chinmay" → {"firstName": {"$regex": "chinmay", "$options": "i"}}
+  - "Apollo Otika" → {"$and": [{"firstName": {"$regex": "Apollo", "$options": "i"}}, {"lastName": {"$regex": "Otika", "$options": "i"}}]}
+  - "computer science" → {"department_name": {"$regex": "computer science", "$options": "i"}}
+- EXCEPTION: For exact IDs, codes, and enum values, use exact matching: {"course_id": "CRS_023"}
 
 **Exclude _ID Fields:**
 - Always exclude "_id" from results unless user specifically requests IDs
@@ -291,10 +302,10 @@ def get_data_type_mapping_guide() -> str:
 - "semester 1" → semester: 1 (Number)
 
 **Text Expressions:**
-- "John Doe", "student name" → "John Doe" (String)
-- "CRS_023", "course code" → "CRS_023" (String)
-- "Computer Science" → "Computer Science" (String)
-- "active", "enrolled" → "active" (String)
+- Names (case-insensitive): "John Doe" → {"$regex": "John Doe", "$options": "i"}
+- Descriptive text: "Computer Science" → {"$regex": "Computer Science", "$options": "i"}
+- IDs and codes (exact match): "CRS_023" → "CRS_023"
+- Status/enum values (exact): "active" → "active"
 
 **Boolean Expressions:**
 - "active", "enabled" → true (Boolean)
