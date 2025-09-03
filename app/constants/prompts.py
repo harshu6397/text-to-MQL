@@ -139,7 +139,17 @@ Generate syntactically correct MQL that:
 - Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
 - Use ONLY aggregate() syntax, not find()
 - **USE CASE-INSENSITIVE MATCHING for names and descriptive text**: Use {{"field": {{"$regex": "value", "$options": "i"}}}} for better user experience
-- **PRESERVE EXACT VALUES for IDs, codes, and enum values**: Use exact matching like {{"course_id": "CRS_023"}} for precise identifiers
+- **AVOID HARDCODED IDs IN COMPLEX QUERIES**: 
+  * Instead of using ObjectIds directly, use descriptive fields like organization names, user names, etc.
+  * Use $lookup to join collections based on descriptive fields rather than hardcoded IDs
+  * Example: Instead of {{"orgId": "66d1ff05dc2eb89b12363112"}}, use organization name lookup
+  * This makes queries more flexible, readable, and maintainable
+  * Only use exact IDs when user specifically provides an ID or when no descriptive alternative exists
+- **DYNAMIC ORGANIZATION/ENTITY LOOKUP PATTERN**:
+  * For organization-based queries: First lookup organization by name, then filter users by that org
+  * For user-based queries: Use name-based matching instead of user IDs where possible
+  * Use $lookup to resolve descriptive names to IDs dynamically within the query
+- **PRESERVE EXACT VALUES for codes and enum values**: Use exact matching like {{"course_id": "CRS_023"}} for precise identifiers
 - For queries with words like "first", "earliest", "oldest", use $sort with ascending order (1) and $limit: 1
 - For queries with words like "last", "latest", "newest", use $sort with descending order (-1) and $limit: 1
 - For queries asking "how many", "count", "total", use $count
@@ -341,6 +351,81 @@ db.courses.aggregate([
 ])
 ```
 
+### Example 10: Dynamic Organization Lookup (Preferred Approach)
+**Input:** "How many users belong to organization iWish AI?"
+**GOOD APPROACH - Use organization name with dynamic lookup:**
+```python
+db.users.aggregate([
+  {{{{
+    "$lookup": {{{{
+      "from": "organizations",
+      "localField": "orgId",
+      "foreignField": "_id",
+      "as": "org_info"
+    }}}}
+  }},
+  {{{{
+    "$match": {{{{
+      "org_info.name": {{{{"$regex": "iWish AI", "$options": "i"}}}},
+      "org_info.deleted": false,
+      "deleted": false
+    }}}}
+  }},
+  {{{{
+    "$count": "total"
+  }}}}
+])
+```
+**BENEFIT**: Query works regardless of organization ID changes and is more readable!
+
+### Example 11: Complex Multi-Collection Dynamic Lookup
+**Input:** "How many users in iWish AI are candidates?"
+```python
+db.users.aggregate([
+  {{{{
+    "$lookup": {{{{
+      "from": "organizations",
+      "localField": "orgId",
+      "foreignField": "_id",
+      "as": "org_info"
+    }}}}
+  }},
+  {{{{
+    "$match": {{{{
+      "org_info.name": {{{{"$regex": "iWish AI", "$options": "i"}}}},
+      "org_info.deleted": false,
+      "deleted": false
+    }}}}
+  }},
+  {{{{
+    "$lookup": {{{{
+      "from": "candidateinfos",
+      "localField": "_id",
+      "foreignField": "userId",
+      "as": "candidate_info"
+    }}}}
+  }},
+  {{{{
+    "$facet": {{{{
+      "totalUsers": [
+        {{{{"$count": "count"}}}}
+      ],
+      "candidates": [
+        {{{{"$match": {{{{"candidate_info.0": {{{{"$exists": true}}}}}}}}}}}},
+        {{{{"$count": "count"}}}}
+      ]
+    }}}}
+  }},
+  {{{{
+    "$project": {{{{
+      "totalUsers": {{{{"$arrayElemAt": ["$totalUsers.count", 0]}}}},
+      "candidates": {{{{"$arrayElemAt": ["$candidates.count", 0]}}}},
+      "_id": 0
+    }}}}
+  }}}}
+])
+```
+
 ## Schema Context
 Target Collection: {target_collection}
 {schema_context if schema_context else "No schema information available"}
@@ -468,7 +553,15 @@ Check for:
 - Field name mismatches with schema
 - Incorrect operators usage
 
-### 2. Structural Issues
+### 2. ObjectId Validation Issues
+**CRITICAL - MongoDB ObjectId Validation:**
+- Check if ObjectIds in the query are exactly 24 characters long
+- ObjectIds must match pattern: [0-9a-fA-F]{24}
+- Common error: truncated ObjectIds (e.g., "66d1ff05dc2eb89b12363" instead of "66d1ff05dc2eb89b12363112")
+- If ObjectId appears truncated, it MUST be fixed to the complete 24-character version
+- Look for complete ObjectIds in the schema context to fix truncated ones
+
+### 3. Structural Issues
 - Missing required stages
 - Performance issues
 - Logic errors

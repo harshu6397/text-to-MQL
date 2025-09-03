@@ -111,6 +111,17 @@ MONGODB_SYNTAX_INSTRUCTIONS = """
   - "computer science" → {"department_name": {"$regex": "computer science", "$options": "i"}}
 - EXCEPTION: For exact IDs, codes, and enum values, use exact matching: {"course_id": "CRS_023"}
 
+**AVOID HARDCODED IDs IN QUERIES:**
+- Prefer descriptive field lookups over hardcoded ObjectIds
+- Use $lookup to dynamically resolve names to IDs within the query
+- Benefits: More maintainable, readable, and flexible queries
+- Pattern for organization queries: 
+  1. $lookup organizations collection
+  2. Filter by organization name using regex
+  3. Then filter main collection based on matched organization
+- Pattern for user queries: Use names, emails, or other descriptive fields instead of user IDs
+- Only use hardcoded IDs when user specifically provides an ID or no descriptive alternative exists
+
 **Exclude _ID Fields:**
 - Always exclude "_id" from results unless user specifically requests IDs
 - Use "_id": 0 in $project stages

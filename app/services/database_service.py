@@ -2,11 +2,23 @@ from app.core.database import db_manager
 from app.core.config import settings
 from typing import Dict, Any, List
 from app.utils.logger import logger
+from bson import ObjectId
 
 
 class DatabaseService:
     def __init__(self):
         pass
+
+    def _convert_objectids(self, obj):
+        """Recursively convert ObjectId instances to strings"""
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        elif isinstance(obj, dict):
+            return {key: self._convert_objectids(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_objectids(item) for item in obj]
+        else:
+            return obj
 
     async def get_collections(self) -> List[str]:
         """Get list of all collections"""
@@ -25,6 +37,8 @@ class DatabaseService:
             # Get sample documents to infer schema
             sample_docs = []
             async for doc in collection.find().limit(5):
+                # Convert all ObjectIds to strings recursively
+                doc = self._convert_objectids(doc)
                 # Remove _id and vector_embedding for cleaner schema
                 if '_id' in doc:
                     del doc['_id']
@@ -84,8 +98,8 @@ class DatabaseService:
                 
                 results = []
                 async for doc in collection.aggregate(pipeline):
-                    if '_id' in doc:
-                        doc['_id'] = str(doc['_id'])
+                    # Convert all ObjectIds to strings recursively
+                    doc = self._convert_objectids(doc)
                     if 'vector_embedding' in doc:
                         del doc['vector_embedding']
                     results.append(doc)
@@ -113,8 +127,8 @@ class DatabaseService:
                 
                 results = []
                 async for doc in cursor:
-                    if '_id' in doc:
-                        doc['_id'] = str(doc['_id'])
+                    # Convert all ObjectIds to strings recursively
+                    doc = self._convert_objectids(doc)
                     results.append(doc)
                 
                 return results
@@ -165,8 +179,7 @@ class DatabaseService:
                         {"$text": {"$search": search_term}},
                         {"vector_embedding": 0}
                     ).limit(10):
-                        if '_id' in doc:
-                            doc['_id'] = str(doc['_id'])
+                        doc = self._convert_objectids(doc)
                         doc['_collection'] = collection_name
                         results.append(doc)
                 except Exception:
@@ -181,8 +194,7 @@ class DatabaseService:
                             ]},
                             {"vector_embedding": 0}
                         ).limit(5):
-                            if '_id' in doc:
-                                doc['_id'] = str(doc['_id'])
+                            doc = self._convert_objectids(doc)
                             doc['_collection'] = collection_name
                             results.append(doc)
                     except Exception:
