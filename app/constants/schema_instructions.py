@@ -4,15 +4,20 @@ Schema-related instructions for MongoDB Query Language (MQL) generation
 
 # Core schema interpretation instructions
 SCHEMA_INTERPRETATION_INSTRUCTIONS = """
-## Schema Interpretation Guidelines
+## Schema Interpretation Guidelines for CallRevu Training Platform
 
 ### 0. CRITICAL SYSTEM RULES (ALWAYS ENFORCE)
 
+**ORGANIZATIONAL TRAINING CONTEXT:**
+- This is the CallRevu organizational training platform database (callrevu-uat-lab)
+- Focus on training, employee development, and organizational learning
+- 85 collections managing company training programs, employee progress, and skill development
+- Key domains: organizational structure, training management, skill development, performance analytics
+
 **ACTIVE RECORDS ONLY:**
 - ALWAYS filter for active records only
-- Add status: "active" or is_active: true to ALL queries
-- If schema shows status field as String type, use: "status": "active"
-- If schema shows is_active field as Boolean type, use: "is_active": true
+- Add deleted: false or deleted: {"$ne": true} to ALL queries where deleted field exists
+- Add status: "active" or isActive: true when applicable
 - NEVER return inactive, deleted, or archived records
 - This applies to ALL collections and ALL query types
 
@@ -24,30 +29,30 @@ SCHEMA_INTERPRETATION_INSTRUCTIONS = """
   - delete, deleteOne, deleteMany
   - findAndModify, findOneAndUpdate, findOneAndDelete
   - Any $out or $merge pipeline stages
-- If user requests write operations, respond with: "I can't help with that type of request. Let me know if you'd like to search for or view any data instead!"
+- If user requests write operations, respond with: "I can't help with that type of request. Let me know if you'd like to search for or view any training data instead!"
 
 **EXCLUDE _ID FIELDS:**
 - NEVER include "_id" fields in query results unless user specifically requests IDs
 - Always use "_id": 0 in $project stages to exclude _id fields
 - Only include _id if user explicitly asks for "ID", "identifier", or "_id" in their query
-- This keeps results clean and focuses on meaningful data
+- This keeps results clean and focuses on meaningful training data
 
-### 1. Data Type Mapping Rules
+### 1. Data Type Mapping Rules for Training Platform
 When converting natural language to MQL queries, follow these strict data type rules:
 
 **Number Fields:**
 - Convert natural language numbers to actual numeric values
-- Examples: "level 4" → level: 4, "age 25" → age: 25
-- Handle grade levels: "freshman" → level: 1, "sophomore" → level: 2, etc.
-- Academic years: "2023" → year: 2023 (numeric, not string)
+- Examples: "course level 4" → level: 4, "progress 75%" → progress: 75
+- Handle completion percentages: "80% complete" → completionPercentage: 80
+- Training scores: "score above 85" → score: {"$gt": 85}
 
 **String Fields:**
-- For exact values like IDs, codes, and status: preserve exact text values in quotes
-- Examples: "CRS_023" → course_id: "CRS_023" (preserve exact format), "active" → status: "active"
-- For names and descriptive text: use case-insensitive regex matching for better user experience
-- Examples: "John Doe" → name: {"$regex": "John Doe", "$options": "i"}
-- Department names: "Computer Science" → dept_name: {"$regex": "Computer Science", "$options": "i"}
-- User names: "chinmay" → firstName: {"$regex": "chinmay", "$options": "i"}
+- For exact values like employee IDs, course codes, and status: preserve exact text values in quotes
+- Examples: "USR_123" → userId: "USR_123", "active" → status: "active"
+- For employee names and descriptive text: use case-insensitive regex matching
+- Examples: "John Smith" → firstName: {"$regex": "John", "$options": "i"}
+- Department names: "Sales Department" → name: {"$regex": "Sales", "$options": "i"}
+- Course titles: "Communication Training" → title: {"$regex": "Communication", "$options": "i"}
 
 **Date Fields:**
 - Convert to proper MongoDB date format
@@ -398,7 +403,7 @@ def check_for_write_operations(user_query: str) -> tuple[bool, str]:
     """
     write_keywords = [
         'insert', 'add', 'create', 'save', 'store',
-        'update', 'modify', 'change', 'edit', 'alter',
+        'update', 'modify', 'edit', 'alter',
         'delete', 'remove', 'drop', 'clear', 'erase',
         'replace', 'upsert', 'merge'
     ]

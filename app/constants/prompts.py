@@ -15,42 +15,69 @@ def get_collection_identification_prompt(user_query: str, available_collections:
     """
     collections_str = ", ".join(available_collections)
     
-    return f"""# Collection Identification for MongoDB Query
+    return f"""# Collection Identification for CallRevu Training Platform MongoDB Query
 
-You are an expert MongoDB database analyst. Your task is to identify which collections are relevant for answering a user's natural language query.
+You are an expert MongoDB database analyst specializing in the CallRevu organizational training platform. Your task is to identify which collections are relevant for answering a user's natural language query.
+
+## Database Context
+This is a comprehensive organizational training database (callrevu-uat-lab) with 85 collections managing:
+- **Organizational Structure**: Companies, departments, accounts, employees
+- **Training Management**: Courses, assignments, progress tracking, content delivery
+- **Skill Development**: Training challenges, role-play scenarios, conversation practice
+- **Performance Analytics**: Progress tracking, assessment scoring, employee development metrics
+- **Call Center Training**: Automotive industry scenarios, conversation analysis, voice training
 
 ## Available Collections
 {collections_str}
+
+## Key Collection Categories for Context:
+1. **Core Organizational**: USERS, DEPARTMENTS, ORGANIZATIONS, ACCOUNTS
+2. **Training Content**: COURSES, COURSECONTENTS, COURSEITEMS, MODULES
+3. **Skill Development**: CHALLENGES, CONVERSATIONS, CONVERSATIONMESSAGES
+4. **Progress Tracking**: COURSEASSIGNMENTS, COURSEPROGRESSES, ITEMPROGRESSES
+5. **Analytics**: CONVERSATIONANALYSES, USERACTIVITIES, AGENTACTIVITIES
 
 ## User Query
 "{user_query}"
 
 ## Instructions
-1. **Analyze the user's question** to understand what information they're seeking
+1. **Analyze the user's question** to understand what training/organizational information they're seeking
 2. **Identify primary collections** that directly contain the data needed to answer the question
-3. **Identify related collections** that might be needed for joins or additional context
-4. **Consider relationships** between collections (e.g., if asking about students in a course, you might need both students and enrollments collections)
+3. **Consider organizational hierarchy** (Organizations → Departments → Users → Training)
+4. **Include relationship collections** when needed (e.g., assignments link users to courses)
+5. **Avoid empty collections** - prioritize collections with actual data
 
 ## Rules
-- Return only collection names that exist in the available collections list
+- Return only collection names that EXACTLY MATCH the available collections list above
+- DO NOT use collection names like "roleplays", "simulations", "trainings" - these are NOT valid collections
+- If user mentions "roleplays" or similar terms, map to actual collections like "CHALLENGES", "CONVERSATIONS"
 - Prioritize collections that directly answer the question
 - Include related collections only if they're necessary for the query
 - Maximum of 4 collections to avoid complexity
 - Return collections in order of importance (most relevant first)
+- Focus on training and organizational business logic
 
 ## Output Format
 Return only a JSON array of collection names, for example:
-["students", "departments", "enrollments"]
+["USERS", "DEPARTMENTS", "COURSEASSIGNMENTS"]
 
 Do not include any explanation or additional text - just the JSON array.
 
-## Examples
-These are generic examples - adapt them based on the actual collections and schema provided:
-
-- Query: "How many records are there?" → Check the most relevant collection
-- Query: "Show records from [collection_name]" → Use the specified collection
+## Training Platform Examples
+- Query: "How many employees are there?" → ["USERS"]
+- Query: "Show course progress for employees" → ["COURSEPROGRESSES", "USERS", "COURSES"]
+- Query: "Training challenges completed by department" → ["CHALLENGES", "USERS", "DEPARTMENTS", "CONVERSATIONS"]
+- Query: "Which roleplays have the highest attempts" → ["CHALLENGES", "CONVERSATIONS"] (NOT "roleplays")
+- Query: "Show simulation results" → ["CHALLENGES", "CONVERSATIONS"] (NOT "simulations")
 - Query: "Find records with [relationship]" → Use relevant collections based on schema
 - Query: "List all records by [field]" → Use collection containing that field
+
+## IMPORTANT: Collection Name Mapping
+- "roleplays" / "roleplay" → Use "CHALLENGES", "CONVERSATIONS"
+- "simulations" → Use "CHALLENGES", "CONVERSATIONS"  
+- "training scenarios" → Use "CHALLENGES", "CONVERSATIONS"
+- "assessments" → Use "CHALLENGES", "CONVERSATIONANALYSES"
+- NEVER use non-existent collection names in your response
 
 ## Your Response
 Based on the user query above, identify the relevant collections:"""
@@ -92,13 +119,25 @@ def get_mql_generation_prompt(target_collection: str, schema_context: str, natur
 You are an expert MongoDB query generator. Your task is to convert natural language descriptions into accurate MongoDB Query Language (MQL) queries.
 
 ## CRITICAL REQUIREMENTS (ALWAYS ENFORCE)
-1. **ACTIVE RECORDS ONLY**: Every query MUST include a filter for active records only. Add {{"status": "active"}} or {{"is_active": true}} to all $match stages.
-2. **READ-ONLY OPERATIONS**: Only generate read operations (aggregate, find, count). If user requests write operations (insert, update, delete), respond with the denial message from schema instructions.
-3. **EXCLUDE _ID FIELDS**: Never include "_id" fields in $project stages unless the user specifically asks for IDs. Use "_id": 0 to exclude _id from results when using $project.
+1. **COLLECTION NAME VALIDATION**: You MUST use ONLY the exact collection name provided: "{target_collection}". Do NOT use any other collection name, even if the user mentions terms like "roleplays", "simulations", etc. Always use the provided target collection name exactly as given.
+2. **FIELD SCHEMA AWARENESS**: Use ONLY the field schema information that's relevant to the user's query. Extract and focus on:
+   - **Query-Relevant Fields Only**: Only reference field types and meanings for fields mentioned in or needed for the user's query
+   - **Boolean Fields**: For fields used in the query, understand their meanings (e.g., status: false = active, true = inactive)
+   - **Deleted Fields**: Always check deleted=false for non-deleted records when filtering
+   - **Field Types**: Use correct data types only for fields involved in the query (string, boolean, date, ObjectId, etc.)
+   - **DO NOT**: Include complete schema information in the query - only use what's necessary for the specific query
+3. **SELECTIVE FIELD USAGE**: Only include fields in $project stages that are:
+   - Explicitly requested by the user
+   - Necessary to answer the user's question
+   - Required for joins or filtering
+4. **ACTIVE RECORDS ONLY**: Include appropriate filters for active/non-deleted records based on the collection schema
+5. **READ-ONLY OPERATIONS**: Only generate read operations (aggregate, find, count). If user requests write operations (insert, update, delete), respond with the denial message from schema instructions.
+6. **EXCLUDE _ID FIELDS**: Never include "_id" fields in $project stages unless the user specifically asks for IDs. Use "_id": 0 to exclude _id from results when using $project.
 
 ## Important Notes
 - You need to build the aggregation pipeline for python code blocks like above
 - Never add ```python and ``` at the beginning and end of the code block
+- CRITICAL: Always use "db.{target_collection}.aggregate()" - do NOT substitute or change the collection name
 
 {schema_instructions}
 
@@ -134,6 +173,10 @@ Generate syntactically correct MQL that:
 - Includes proper field names and collection references
 - Uses efficient query patterns
 - **PRESERVES EXACT VALUES** from the user query (e.g., if user says "CRS_023", use "CRS_023" not "CRS_002")
+- **MINIMAL FIELD PROJECTION**: In $project stages, only include fields that:
+  * Are explicitly requested by the user
+  * Are necessary to answer the specific question asked
+  * Are required for display based on the user's intent
 
 ### 4. Important Rules
 - Don't add '$' before field names unless it's a MongoDB operator (e.g., $gt, $in), as this is a common mistake
